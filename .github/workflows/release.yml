@@ -1,0 +1,73 @@
+name: Release
+
+# Pushing a tag like v0.2.0 builds the installers and publishes a GitHub
+# release whose notes are the "## [0.2.0]" section of CHANGELOG.md.
+# Create the tag with scripts/release.ps1 (see docs/BUILD.md#releases).
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build installers and publish
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version and read release notes
+        id: notes
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = $tag.TrimStart('v')
+          $cargo = Get-Content Cargo.toml -Raw
+          if ($cargo -notmatch '(?m)^version = "([^"]+)"') { throw 'No version in Cargo.toml' }
+          if ($Matches[1] -ne $version) {
+            throw "Tag $tag does not match Cargo.toml version $($Matches[1])"
+          }
+          $lines = Get-Content CHANGELOG.md
+          $start = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "^## \[$([regex]::Escape($version))\]") { $start = $i + 1; break }
+          }
+          if ($start -lt 0) { throw "CHANGELOG.md has no section for $version" }
+          $end = $lines.Count
+          for ($i = $start; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^## \[' -or $lines[$i] -match '^\[[^\]]+\]: ') { $end = $i; break }
+          }
+          $notes = ($lines[$start..($end - 1)] -join "`n").Trim()
+          if (-not $notes) { throw "CHANGELOG.md section for $version is empty" }
+          Set-Content -Path release-notes.md -Value $notes -Encoding utf8
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install UI dependencies
+        working-directory: app
+        run: npm ci --no-fund --no-audit
+
+      - name: Build installers
+        working-directory: app
+        run: npx --yes @tauri-apps/cli@^2 build
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ steps.notes.outputs.version }}'
+          $files = Get-ChildItem target/release/bundle -Recurse -Include "RCleaner_${v}_*.msi", "RCleaner_${v}_*-setup.exe"
+          if ($files.Count -lt 2) { throw 'Installers not found' }
+          gh release create '${{ github.ref_name }}' $files.FullName `
+            --title "RCleaner $v" --notes-file release-notes.md

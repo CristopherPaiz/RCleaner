@@ -82,7 +82,8 @@ El `rcleaner.exe` portable, suelto, sí necesita WebView2 (viene en todo
 Windows 11 y Windows 10 actualizado); para ir seguro, usa los instaladores.
 
 ### Versión
-Se toma de `[workspace.package] version` en el `Cargo.toml` raíz. Cambia sólo ahí.
+Se toma de `[workspace.package] version` en el `Cargo.toml` raíz.
+`scripts/release.ps1` la cambia por ti (ver [Publicar versiones](#publicar-versiones)).
 
 ### Idioma del instalador
 `app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language` (`es-ES`) y
@@ -100,6 +101,31 @@ Sin firma, SmartScreen mostrará "Editor desconocido". Con un certificado:
 "digestAlgorithm": "sha256",
 "timestampUrl": "http://timestamp.digicert.com"
 ```
+
+## Publicar versiones
+
+GitHub compila y publica las versiones (releases); las notas salen de
+[CHANGELOG.md](../CHANGELOG.md).
+
+1. Mientras trabajas, añade cada cambio visible para el usuario bajo
+   `## [Unreleased]` en `CHANGELOG.md` (`### Added`, `### Changed`,
+   `### Fixed`, `### Removed`, `### Security`), en inglés, y súbelo con el cambio.
+2. Para publicar, en `main` actualizado y sin cambios pendientes:
+
+   ```powershell
+   .\scripts\release.ps1 0.2.0
+   ```
+
+   Mueve las notas de Unreleased a `## [0.2.0] - <fecha>`, pone la versión en
+   `Cargo.toml`, `Cargo.lock` y `app/package*.json`, hace el commit
+   `chore(release): v0.2.0`, crea la etiqueta `v0.2.0` y sube todo. Con
+   `-NoPush` puedes revisarlo antes y luego `git push origin main v0.2.0`.
+3. La etiqueta lanza [`.github/workflows/release.yml`](../.github/workflows/release.yml):
+   comprueba que la etiqueta coincide con `Cargo.toml` y que el changelog tiene
+   la sección, compila los instaladores MSI y EXE y crea la release de GitHub
+   con ambos archivos y esa sección como notas (~15 min).
+
+Las versiones deben ser `X.Y.Z` sin sufijos (el MSI no acepta `-beta`).
 
 ## 4. Solución de problemas
 

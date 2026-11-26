@@ -43,7 +43,9 @@ Arquitectura: [docs/ARCHITECTURE.es.md](docs/ARCHITECTURE.es.md). Reglas de la U
    `npx svelte-check` limpio si tocaste la UI.
 4. Mensajes con [Conventional Commits](https://www.conventionalcommits.org/es/):
    `feat: limpiador de caché de Unity`, `fix(space): …`, `i18n(fr): …`.
-5. Rellena la plantilla del PR. En cambios de UI, las capturas ayudan mucho.
+5. Añade una línea (en inglés) bajo `## [Unreleased]` en [CHANGELOG.md](CHANGELOG.md)
+   si el usuario notará el cambio.
+6. Rellena la plantilla del PR. En cambios de UI, las capturas ayudan mucho.
 
 La CI ejecuta las mismas comprobaciones en cada pull request.
 

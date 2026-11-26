@@ -81,8 +81,8 @@ The portable `rcleaner.exe` alone still needs WebView2 (present on every
 Windows 11 and up-to-date Windows 10); use the installers to be safe.
 
 ### Version
-Taken from `[workspace.package] version` in the root `Cargo.toml`. Change it
-only there.
+Taken from `[workspace.package] version` in the root `Cargo.toml`.
+`scripts/release.ps1` changes it for you (see [Releases](#releases)).
 
 ### Installer language
 `app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language` (`es-ES`) and
@@ -100,6 +100,31 @@ Without a signature, SmartScreen shows "Unknown publisher". With a certificate:
 "digestAlgorithm": "sha256",
 "timestampUrl": "http://timestamp.digicert.com"
 ```
+
+## Releases
+
+GitHub builds and publishes releases; the notes come from
+[CHANGELOG.md](../CHANGELOG.md).
+
+1. While you work, add each user-facing change under `## [Unreleased]` in
+   `CHANGELOG.md` (`### Added`, `### Changed`, `### Fixed`, `### Removed`,
+   `### Security`) and commit it with the change.
+2. To release, on an up-to-date, clean `main`:
+
+   ```powershell
+   .\scripts\release.ps1 0.2.0
+   ```
+
+   It moves the Unreleased notes to `## [0.2.0] - <date>`, sets the version
+   in `Cargo.toml`, `Cargo.lock` and `app/package*.json`, commits
+   `chore(release): v0.2.0`, tags `v0.2.0` and pushes. Use `-NoPush` to
+   review first, then `git push origin main v0.2.0`.
+3. The tag starts [`.github/workflows/release.yml`](../.github/workflows/release.yml):
+   it checks that the tag matches `Cargo.toml` and that the changelog has the
+   section, builds the MSI and EXE installers and creates the GitHub release
+   with both files and that section as notes (~15 min).
+
+Versions must be plain `X.Y.Z` (MSI does not accept `-beta` suffixes).
 
 ## 4. Troubleshooting
 

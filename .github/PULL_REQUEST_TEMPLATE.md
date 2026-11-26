@@ -15,3 +15,4 @@
 - [ ] User-facing text is in `locales/en.json` and `locales/es.json`, not hard-coded. / Los textos están en `locales/`, no fijos en el código.
 - [ ] New cleaners: honest risk level, a test and an entry in `docs/MODULES.md` + `docs/MODULES.es.md`. / Limpiadores nuevos: riesgo honesto, test y entrada en `docs/MODULES.es.md` + `docs/MODULES.md`.
 - [ ] Screenshots for UI changes. / Capturas si cambia la UI.
+- [ ] User-facing changes noted under `## [Unreleased]` in `CHANGELOG.md`. / Cambios visibles anotados en `CHANGELOG.md`.

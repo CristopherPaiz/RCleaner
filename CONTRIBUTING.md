@@ -43,7 +43,9 @@ Architecture overview: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). UI rules:
    `npx svelte-check` clean if you touched the UI.
 4. Use [Conventional Commits](https://www.conventionalcommits.org/) for
    messages: `feat: add Unity cache cleaner`, `fix(space): …`, `i18n(fr): …`.
-5. Fill in the PR template. Screenshots help a lot for UI changes.
+5. Add a line to `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) if users
+   will notice the change.
+6. Fill in the PR template. Screenshots help a lot for UI changes.
 
 CI runs the same checks on every pull request.
 
