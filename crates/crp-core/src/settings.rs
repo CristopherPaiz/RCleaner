@@ -1,7 +1,7 @@
-//! Ajustes del usuario e historial de limpiezas, en `%APPDATA%\CleanCRP`.
+//! Ajustes del usuario e historial de limpiezas, en `%APPDATA%\RCleaner`.
 //!
 //! ```text
-//! %APPDATA%\CleanCRP\
+//! %APPDATA%\RCleaner\
 //!   settings.json   carpetas de proyectos, exclusiones, modo por defecto
 //!   history.json    últimas limpiezas (fecha, modo, espacio liberado)
 //!   modes\*.toml    modos personalizados
@@ -25,9 +25,13 @@ pub struct AppPaths {
 
 impl AppPaths {
     pub fn new(env: &Env) -> Self {
-        Self {
-            config_dir: env.roaming_app_data.join("CleanCRP"),
+        let config_dir = env.roaming_app_data.join("RCleaner");
+        // La app se llamaba Clean-CRP: conservar sus ajustes, historial y modos.
+        let legacy = env.roaming_app_data.join("CleanCRP");
+        if legacy.is_dir() && !config_dir.exists() {
+            let _ = std::fs::rename(&legacy, &config_dir);
         }
+        Self { config_dir }
     }
 
     pub fn settings_file(&self) -> PathBuf {
@@ -52,6 +56,10 @@ pub struct Settings {
     pub exclusions: Vec<PathBuf>,
     /// Modo seleccionado al abrir la app.
     pub default_mode: Option<String>,
+    /// Código de idioma (`es`, `en`…). `None` = el del sistema.
+    pub language: Option<String>,
+    /// `light` / `dark`. `None` = el del sistema.
+    pub theme: Option<String>,
 }
 
 impl Settings {
@@ -137,13 +145,15 @@ mod tests {
     #[test]
     fn settings_roundtrip_and_defaults() {
         let dir = tempfile::tempdir().unwrap();
-        let file = dir.path().join(r"CleanCRP\settings.json");
+        let file = dir.path().join(r"RCleaner\settings.json");
         assert_eq!(Settings::load(&file).unwrap(), Settings::default());
 
         let s = Settings {
             dev_roots: vec![PathBuf::from(r"D:\code")],
             exclusions: vec![PathBuf::from(r"C:\keep")],
             default_mode: Some("programador".into()),
+            language: Some("en".into()),
+            theme: None,
         };
         s.save(&file).unwrap();
         assert_eq!(Settings::load(&file).unwrap(), s);

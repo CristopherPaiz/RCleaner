@@ -1,85 +1,126 @@
-# Clean-CRP
+<div align="center">
 
-Limpiador y mantenimiento **modular** para Windows, escrito en Rust.
-Inspirado en CCleaner / PC Manager (limpieza), WinDirStat (mapa de disco) y
-Bulk Crap Uninstaller (desinstalador), con **modos por perfil**:
+<img src="app/app-icon.png" width="112" alt="" />
 
-| Modo | Para quién | Qué limpia |
+# RCleaner
+
+**A modular, open-source cleaner and disk tool for Windows, written in Rust.**
+
+English · [Español](README.es.md)
+
+</div>
+
+RCleaner brings together what usually takes several apps: a cleaner like
+CCleaner or PC Manager, a disk map like WinDirStat or DaisyDisk, and a duplicate
+finder. Cleaning is organized in **modes**, so a gamer, a developer and someone
+who just wants free space each get the right set of cleaners.
+
+> RCleaner is a tongue-in-cheek nod to CCleaner: an independent open-source
+> project, not affiliated with or endorsed by CCleaner or its owners. CCleaner is
+> a trademark of its respective owner.
+
+> **Analyzing never deletes anything.** Every finding shows its size and a risk
+> level, and only the *Safe* ones are preselected.
+
+## Features
+
+- **Overview** – system drive usage, shortcuts and a one-click quick clean.
+- **Cleanup** – 37 cleaners grouped into modes (plus your own custom modes),
+  warnings when an app that locks its files is open, exclusions and
+  restart-as-administrator for system folders.
+- **Space** – an interactive radial map of any drive or folder, the largest
+  files and a breakdown by file type. Whatever you pick goes to the Recycle Bin.
+- **Duplicates** – exact copies by content (BLAKE3). Hard links and cloud-only
+  files are skipped, and at least one copy of every file is always kept.
+- **Your language and theme** – English and Spanish (the system language by
+  default), light, dark or system theme. More languages are welcome, see
+  [Translating](docs/TRANSLATING.md).
+- **CLI** – the same engine from the terminal (`rcl`).
+
+### Modes
+
+| Mode | For | What it cleans |
 |---|---|---|
-| **Rápido** | Cualquiera | Temporales, miniaturas, informes de errores, volcados, shaders, papelera, caché de navegadores |
-| **Programador** | Devs | Rápido + pip/uv/poetry/conda, npm/pnpm/yarn/bun, cargo, Go, Gradle, Maven, NuGet, VS Code/Cursor, JetBrains, `node_modules`/`target`/`__pycache__`/`.venv`, modelos de IA |
-| **IA / ML** | Quien descarga modelos | Ollama, Hugging Face, LM Studio, Torch/Whisper/Keras + cachés Python |
-| **Gamer** | Juegos | Rápido + shaders (incl. Steam), Delivery Optimization, Windows Update |
-| **Profundo** | Avanzado | Todos los módulos |
+| **Quick** | Anyone | Temp files, thumbnails, error reports, dumps, shaders, Recycle Bin, browser caches |
+| **Developer** | Devs | Quick + pip/uv/poetry/conda, npm/pnpm/yarn/bun, Cargo, Go, Gradle, Maven, NuGet, VS Code/Cursor, JetBrains, `node_modules`/`target`/`__pycache__`/`.venv`, AI models |
+| **AI / ML** | Model hoarders | Ollama, Hugging Face, LM Studio, Torch/Whisper/Keras + Python caches |
+| **Gamer** | Games | Quick + shaders (including Steam), Delivery Optimization, Windows Update |
+| **Deep** | Advanced | Every module |
 
-Cada hallazgo tiene un **riesgo** (Seguro / Moderado / Avanzado). Sólo lo seguro
-se preselecciona. **Analizar nunca borra nada.**
+Risk levels: **Safe** (rebuilt automatically, nothing of yours is lost),
+**Moderate** (rebuilt but costs time: re-downloads, re-indexing, rebuilds) and
+**Advanced** (data you put there on purpose, like models or virtual
+environments). The full list is in [docs/MODULES.md](docs/MODULES.md).
 
-## Estado
+## Install
 
-Fases 0–2 listas: motor, 37 limpiadores, CLI y app de escritorio con
-inicio (discos + historial), limpieza por modos, ajustes (carpetas de
-proyectos, exclusiones), editor de modos personalizados, aviso de programas
-abiertos y reinicio como administrador. Siguiente: analizador de disco y
-duplicados. Plan completo en [docs/ROADMAP.md](docs/ROADMAP.md).
+Download the latest **MSI** or **EXE** installer from the Releases page.
+RCleaner needs Windows 10/11 with WebView2 (already part of Windows 11).
 
-Datos del usuario en `%APPDATA%\CleanCRP\` (`settings.json`, `history.json`,
+Your settings live in `%APPDATA%\RCleaner\` (`settings.json`, `history.json`,
 `modes\*.toml`).
 
-## Inicio rápido
+## Build from source
 
 ```powershell
-# Requisitos: Rust stable (MSVC), Node 20+, WebView2 (incluido en Windows 11)
+# Requirements: Rust stable (MSVC), Node 20+, WebView2
 cargo install tauri-cli --version "^2" --locked
 
-git clone <repo> Clean-CRP; cd Clean-CRP
-cargo test                       # tests del motor y módulos
-cargo run -p crp-cli -- scan --mode programador   # vista previa en terminal
+git clone <repo-url> RCleaner; cd RCleaner
+cargo test --workspace --exclude rcleaner         # engine and module tests
+cargo run -p crp-cli -- scan --mode programador    # preview in the terminal
 
 cd app; npm install
-cargo tauri dev                  # app de escritorio con recarga en caliente
+cargo tauri dev                                    # desktop app with hot reload
 ```
 
-Instaladores **MSI** y **EXE (NSIS)**:
-
-```powershell
-.\scripts\build.ps1
-```
-
-Detalles en [docs/BUILD.md](docs/BUILD.md).
+Installers (MSI and NSIS EXE): `.\scripts\build.ps1`. More in
+[docs/BUILD.md](docs/BUILD.md).
 
 ## CLI
 
 ```text
-crp info                              # rutas, admin, carpetas de proyectos detectadas
-crp modes                             # modos disponibles
-crp modules --mode programador        # módulos de un modo
-crp scan --mode programador           # vista previa agrupada
-crp scan --module "dev.*" --json      # selectores y salida JSON
-crp clean --mode rapido               # SIMULACIÓN de lo preseleccionado
-crp clean --mode rapido --yes         # limpia de verdad
-crp clean --mode programador --risk moderate --yes
-crp clean --module ai.ollama --only "llama3:8b" --yes
+rcl info                              # paths, admin, detected project folders
+rcl modes                             # available modes
+rcl modules --mode programador        # modules of a mode
+rcl scan --mode programador           # grouped preview
+rcl scan --module "dev.*" --json      # selectors and JSON output
+rcl clean --mode rapido               # DRY RUN of the preselected items
+rcl clean --mode rapido --yes         # really clean
+rcl clean --mode programador --risk moderate --yes
+rcl space C:\ --top 20                # what takes up space
+rcl dupes D:\Photos E:\Backup         # duplicates (deletes nothing)
 ```
 
-## Estructura
+Mode ids (`rapido`, `programador`, `ia`, `gamer`, `profundo`) are stable
+identifiers; their names are translated.
+
+## Project layout
 
 ```
 crates/
-  crp-core/      motor: modelo, módulos, escaneo paralelo, borrado seguro, modos (TOML)
-  crp-platform/  Win32 (admin, papelera…). Único sitio con unsafe
-  crp-modules/   limpiadores: system, browsers, dev, ai
-  crp-cli/       binario `crp`
+  crp-core/      engine: model, modules, parallel scan, safe deletion, modes, i18n
+  crp-platform/  Win32 (admin, Recycle Bin, processes, drives, language). The only unsafe code
+  crp-modules/   cleaners: system, browsers, dev, ai
+  crp-disk/      space analyzer and duplicate finder
+  crp-cli/       the `rcl` binary
 app/
-  src/           UI Svelte 5 + TypeScript
-  src-tauri/     backend Tauri 2 (comandos, estado, bundle MSI/NSIS)
-docs/            roadmap, arquitectura, módulos, build
-scripts/         build.ps1
+  src/           Svelte 5 + TypeScript UI
+  src-tauri/     Tauri 2 backend (commands, state, MSI/NSIS bundle)
+locales/         translations shared by the app, the engine and the CLI
+docs/            roadmap, architecture, modules, design, build, translating
 ```
 
-Más en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y el catálogo de
-limpiadores en [docs/MODULES.md](docs/MODULES.md).
+## Contributing
 
-## Licencia
+Bug reports, new cleaners, translations and design ideas are all welcome.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md); to add a language, read
+[docs/TRANSLATING.md](docs/TRANSLATING.md). Everyone taking part is expected to
+follow the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go through
+[SECURITY.md](SECURITY.md), not public issues.
 
-MIT
+Where things are going: [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## License
+
+[MIT](LICENSE)

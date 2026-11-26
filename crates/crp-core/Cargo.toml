@@ -1,6 +1,6 @@
 [package]
 name = "crp-core"
-description = "Motor de Clean-CRP: modelo, módulos, escaneo, ejecución segura y modos."
+description = "Motor de RCleaner: modelo, módulos, escaneo, ejecución segura y modos."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

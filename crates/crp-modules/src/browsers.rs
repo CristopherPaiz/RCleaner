@@ -1,7 +1,7 @@
 //! Caché de navegadores. Sólo caché: cookies, historial y contraseñas NO se tocan.
 
 use crp_core::rules::glob_under;
-use crp_core::{Category, Engine, ModuleMeta, PathRuleModule, Risk, Target};
+use crp_core::{Category, Engine, ModuleMeta, PathRuleModule, Risk, Target, t, tf};
 use std::path::{Path, PathBuf};
 
 /// Navegadores basados en Chromium: (id, nombre, carpeta bajo %LOCALAPPDATA%, ejecutable).
@@ -70,17 +70,16 @@ const BASE_CACHES: &[&str] = &["ShaderCache", "GrShaderCache", "GraphiteDawnCach
 pub fn register(e: &mut Engine) {
     for &(id, name, rel, exe) in CHROMIUM {
         e.register(PathRuleModule::new(
-            ModuleMeta::new(id, name, Category::Browser)
-                .describe("Caché web, de código y de GPU de todos los perfiles.")
+            ModuleMeta::new(id, Category::Browser)
+                .named(name)
+                .describe(t("module.browser.chromium.desc"))
                 .closes(&[exe]),
             move |ctx| chromium_targets(name, &ctx.env.local_app_data.join(rel)),
         ));
     }
 
     e.register(PathRuleModule::new(
-        ModuleMeta::new("browser.firefox", "Mozilla Firefox", Category::Browser)
-            .describe("Caché web (cache2), startupCache y miniaturas de todos los perfiles.")
-            .closes(&["firefox.exe"]),
+        ModuleMeta::new("browser.firefox", Category::Browser).closes(&["firefox.exe"]),
         |ctx| {
             let profiles = glob_under(
                 &ctx.env.local_app_data.join(r"Mozilla\Firefox\Profiles"),
@@ -92,7 +91,7 @@ pub fn register(e: &mut Engine) {
                     ["cache2", "startupCache", "thumbnails", "jumpListCache"].map(|s| p.join(s))
                 })
                 .collect();
-            vec![Target::contents("cache", "Caché de Firefox", roots)]
+            vec![Target::contents("cache", roots)]
         },
     ));
 }
@@ -123,9 +122,14 @@ fn chromium_targets(name: &str, user_data: &Path) -> Vec<Target> {
         .collect();
 
     vec![
-        Target::contents("cache", &format!("Caché de {name}"), cache),
-        Target::contents("service_workers", &format!("Service Workers de {name}"), sw)
+        Target::contents("cache", cache)
+            .label(tf("module.browser.chromium.cache", &[("name", &name)])),
+        Target::contents("service_workers", sw)
+            .label(tf(
+                "module.browser.chromium.service_workers",
+                &[("name", &name)],
+            ))
             .risk(Risk::Moderate)
-            .detail("Datos offline de sitios y PWAs; se vuelven a descargar al visitarlos."),
+            .detail(t("module.browser.chromium.service_workers_detail")),
     ]
 }

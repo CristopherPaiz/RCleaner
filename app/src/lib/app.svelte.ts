@@ -13,8 +13,9 @@ import {
   type Settings,
   type SystemInfo,
 } from "./api";
+import { i18n, resolveLang } from "./i18n.svelte";
 
-export type View = "home" | "clean" | "settings";
+export type View = "home" | "clean" | "space" | "dupes" | "settings";
 export type Phase = "idle" | "scanning" | "results" | "cleaning" | "done";
 
 class AppStore {
@@ -23,7 +24,7 @@ class AppStore {
   modes = $state<Mode[]>([]);
   modeErrors = $state<string[]>([]);
   modules = $state<ModuleMeta[]>([]);
-  settings = $state<Settings>({ dev_roots: [], exclusions: [], default_mode: null });
+  settings = $state<Settings>({ dev_roots: [], exclusions: [], default_mode: null, language: null, theme: null });
 
   // ── Navegación ───────────────────────────────────────────────────────
   view = $state<View>("home");
@@ -50,6 +51,8 @@ class AppStore {
       this.info = info;
       this.modules = modules;
       this.settings = settings;
+      i18n.lang = resolveLang(info.language);
+      applyTheme(settings.theme);
       this.setModes(modeList.modes, modeList.errors);
       this.mode =
         this.modes.find((m) => m.id === settings.default_mode) ??
@@ -79,17 +82,43 @@ class AppStore {
     this.info = await api.systemInfo();
   }
 
+  setTheme(theme: Settings["theme"]) {
+    applyTheme(theme);
+    void this.saveSettings({ ...this.settings, theme }).catch((e) => (this.error = String(e)));
+  }
+
+  /** Cambia el idioma (`null` = el del sistema). Los textos del motor se
+   *  regeneran, así que se recargan módulos y modos y se descarta el análisis. */
+  async setLanguage(language: string | null) {
+    if (this.busy) return;
+    try {
+      await this.saveSettings({ ...this.settings, language });
+      i18n.lang = resolveLang(this.info?.language);
+      this.modules = await api.modules();
+      await this.reloadModes();
+      this.reset();
+    } catch (e) {
+      this.error = String(e);
+    }
+  }
+
   onProgress(e: ProgressEvent) {
     if (e.type === "scan_started" || e.type === "clean_started") this.progress = { done: 0, total: e.total, current: "" };
     else if (e.type === "module_finished") this.progress = { done: e.done, total: e.total, current: e.module_id };
     else if (e.type === "finding_cleaned") this.progress = { done: e.done, total: e.total, current: e.finding_id };
   }
 
+  /** Cambia el modo de limpieza (descarta un resultado de otro modo). */
+  setMode(mode: Mode) {
+    if (this.busy || this.mode?.id === mode.id) return;
+    this.reset();
+    this.mode = mode;
+  }
+
   /** Abre la vista de limpieza con un modo (y opcionalmente analiza ya). */
   openMode(mode: Mode, scanNow = false) {
     if (this.busy) return;
-    if (this.mode?.id !== mode.id) this.reset();
-    this.mode = mode;
+    this.setMode(mode);
     this.view = "clean";
     if (scanNow) void this.scan();
   }
@@ -109,6 +138,7 @@ class AppStore {
     if (!this.mode || this.busy) return;
     this.error = null;
     this.cleanReport = null;
+    this.report = null;
     this.phase = "scanning";
     try {
       this.report = await api.scan(this.mode.modules);
@@ -117,7 +147,7 @@ class AppStore {
       this.phase = "results";
     } catch (e) {
       this.error = String(e);
-      this.phase = this.report ? "results" : "idle";
+      this.phase = "idle";
     }
   }
 
@@ -135,3 +165,10 @@ class AppStore {
 }
 
 export const app = new AppStore();
+
+/** `null` sigue al sistema; `light`/`dark` lo fuerzan (ver app.css). */
+export function applyTheme(theme: Settings["theme"]) {
+  const root = document.documentElement;
+  if (theme) root.dataset.theme = theme;
+  else delete root.dataset.theme;
+}

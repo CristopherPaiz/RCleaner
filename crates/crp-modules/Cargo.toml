@@ -1,6 +1,6 @@
 [package]
 name = "crp-modules"
-description = "Limpiadores de Clean-CRP: sistema, navegadores, desarrollo e IA."
+description = "Limpiadores de RCleaner: sistema, navegadores, desarrollo e IA."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

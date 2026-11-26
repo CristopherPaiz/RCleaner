@@ -1,6 +1,6 @@
-# Modos incluidos en Clean-CRP.
+# Modos incluidos en RCleaner.
 # Selectores: "id.exacto", "categoria.*", "*" (todo) y "!selector" (excluir).
-# Para crear modos propios copia este formato a %APPDATA%\CleanCRP\modes\mi-modo.toml
+# Para crear modos propios copia este formato a %APPDATA%\RCleaner\modes\mi-modo.toml
 
 [[mode]]
 id = "rapido"

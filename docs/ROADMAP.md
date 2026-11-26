@@ -1,79 +1,91 @@
-# Clean-CRP — Plan por fases
+# RCleaner — Phased plan
 
-Limpiador y mantenimiento para Windows escrito en Rust. Une lo que hacían
-CCleaner / PC Manager (limpieza), WinDirStat (mapa de disco) y
-Bulk Crap Uninstaller (desinstalador masivo), con **modos** pensados por perfil
-de usuario (rápido, programador, IA, gamer, profundo).
+English · [Español](ROADMAP.es.md)
 
-## Decisiones de stack
+Cleanup and maintenance tool for Windows written in Rust. It brings together
+what CCleaner / PC Manager (cleanup), WinDirStat (disk map) and
+Bulk Crap Uninstaller (bulk uninstaller) do, with **modes** built around user
+profiles (quick, developer, AI, gamer, deep).
 
-| Tema | Elección | Por qué |
+## Stack decisions
+
+| Topic | Choice | Why |
 |---|---|---|
-| Lenguaje | Rust 2024 (stable) | Rápido, binario único, sin GC, seguro en memoria. |
-| GUI | **Tauri 2** + Svelte 5 + Vite | Binario ~10 MB (usa WebView2 del sistema), UI moderna, genera **MSI (WiX)** y **EXE (NSIS)** con un comando. Tauri 3 sigue en alpha: no se usa. |
-| Paralelismo | `rayon` | Escaneo de módulos y medición de carpetas en paralelo. |
-| Recorrido FS | `walkdir` (sin seguir enlaces) | No entra en junctions/symlinks → nunca borra fuera de la ruta. |
-| Win32 | `windows-sys` | FFI mínima: admin, papelera, (luego) registro, puntos de restauración. |
-| Registro | `winreg` (fase 4-5) | Lectura de desinstaladores y limpieza de claves con respaldo `.reg`. |
-| Hash duplicados | `xxhash` (rápido) + `blake3` (confirmación) | Tamaño → hash parcial → hash completo. |
-| CLI | `clap` | Automatizable, scriptable y base de pruebas. |
+| Language | Rust 2024 (stable) | Fast, single binary, no GC, memory safe. |
+| GUI | **Tauri 2** + Svelte 5 + Vite | ~10 MB binary (uses the system's WebView2), modern UI, builds **MSI (WiX)** and **EXE (NSIS)** with one command. Tauri 3 is still in alpha: not used. |
+| Parallelism | `rayon` | Module scans and folder sizing in parallel. |
+| FS walking | `walkdir` (doesn't follow links) | Never enters junctions/symlinks → never deletes outside the path. |
+| Win32 | `windows-sys` | Minimal FFI: admin, Recycle Bin, (later) registry, restore points. |
+| Registry | `winreg` (phases 4-5) | Reading uninstallers and cleaning keys with a `.reg` backup. |
+| Duplicate hashing | `blake3` | Size → 16 KiB hash → full hash. BLAKE3 with SIMD is already faster than the disk; a second algorithm adds nothing. |
+| CLI | `clap` | Automatable, scriptable and a base for tests. |
 
-## Principios (no negociables)
+## Principles (non-negotiable)
 
-1. **Primero vista previa.** Escanear nunca borra. Limpiar exige confirmación (`--yes` en CLI, diálogo en GUI).
-2. **Nunca seguir enlaces.** Junctions/symlinks se tratan como hojas.
-3. **Lista de rutas protegidas.** Raíces de disco, `C:\Windows`, `System32`, `WinSxS`, perfil de usuario, `Program Files`, etc. jamás son objetivo.
-4. **Riesgo explícito.** Cada hallazgo es `Seguro`, `Moderado` o `Avanzado`. Sólo los seguros se preseleccionan.
-5. **Admin bajo demanda.** La app corre como usuario; lo que requiere admin se marca y se omite si no hay elevación.
-6. **Respaldos** antes de tocar registro (export `.reg`) y punto de restauración opcional.
-7. **Módulos declarativos.** Añadir un limpiador = declarar rutas; la lógica de borrado/medición es común.
+1. **Preview first.** Scanning never deletes. Cleaning requires confirmation (`--yes` in the CLI, a dialog in the GUI).
+2. **Never follow links.** Junctions/symlinks are treated as leaves.
+3. **Protected path list.** Drive roots, `C:\Windows`, `System32`, `WinSxS`, the user profile, `Program Files`, etc. are never a target.
+4. **Explicit risk.** Every finding is `Safe`, `Moderate` or `Advanced`. Only safe ones are preselected.
+5. **Admin on demand.** The app runs as the user; what needs admin is marked and skipped without elevation.
+6. **Backups** before touching the registry (`.reg` export) and an optional restore point.
+7. **Declarative modules.** Adding a cleaner = declaring paths; the delete/measure logic is shared.
 
-## Fases
+## Phases
 
-### Fase 0 — Cimientos ✅
-- Workspace Cargo: `crp-core`, `crp-platform`, `crp-modules`, `crp-cli`.
-- Motor: registro de módulos, escaneo paralelo, ejecución, progreso, cancelación, guardas de seguridad.
-- Modos embebidos (TOML), selectores `dev.*`.
-- Docs: levantar proyecto, arquitectura, builds.
+### Phase 0 — Foundations ✅
+- Cargo workspace: `crp-core`, `crp-platform`, `crp-modules`, `crp-cli`.
+- Engine: module registry, parallel scan, execution, progress, cancellation, safety guards.
+- Embedded modes (TOML), `dev.*` selectors.
+- Docs: running the project, architecture, builds.
 
-### Fase 1 — Limpieza base + modos ✅
-- **Sistema:** temporales usuario/Windows, miniaturas, WER, volcados, logs de Windows, cachés de shaders (DirectX/NVIDIA/AMD/Intel), Delivery Optimization, descargas de Windows Update, papelera.
-- **Navegadores (sólo caché):** Chrome, Edge, Brave, Vivaldi, Opera/GX, Chromium, Firefox.
-- **Programador:** pip, uv, poetry, conda (tarballs), npm, pnpm, yarn, bun, cargo, gradle, maven, NuGet, Go, VS Code/Cursor, JetBrains; artefactos de proyectos (`node_modules`, `target`, `__pycache__`, `.venv`, `.next`…).
-- **IA:** modelos Ollama (borrado de capas no compartidas), Hugging Face hub, LM Studio, Torch/Whisper/Keras.
-- CLI `crp`: `modes`, `modules`, `scan`, `clean`, `info`.
+### Phase 1 — Base cleanup + modes ✅
+- **System:** user/Windows temp files, thumbnails, WER, dumps, Windows logs, shader caches (DirectX/NVIDIA/AMD/Intel), Delivery Optimization, Windows Update downloads, Recycle Bin.
+- **Browsers (cache only):** Chrome, Edge, Brave, Vivaldi, Opera/GX, Chromium, Firefox.
+- **Developer:** pip, uv, poetry, conda (tarballs), npm, pnpm, yarn, bun, cargo, gradle, maven, NuGet, Go, VS Code/Cursor, JetBrains; project artifacts (`node_modules`, `target`, `__pycache__`, `.venv`, `.next`…).
+- **AI:** Ollama models (deleting layers no other model uses), Hugging Face hub, LM Studio, Torch/Whisper/Keras.
+- `rcl` CLI: `modes`, `modules`, `scan`, `clean`, `info`.
 
-### Fase 2 — App de escritorio ✅
-- Tauri 2 + Svelte 5. Vistas **Inicio** (discos, accesos a modos, historial y total liberado), **Limpiar** (progreso en vivo, filtro, orden por tamaño/antigüedad, selección rápida Seguros/Todo/Nada, avisos, confirmación, resumen con errores) y **Ajustes**.
-- Ajustes persistentes (`%APPDATA%\CleanCRP\settings.json`): carpetas de proyectos (auto o manual), **exclusiones** (respetadas al medir y al borrar), modo al abrir.
-- **Modos personalizados** con editor visual (o duplicando uno incluido) → `%APPDATA%\CleanCRP\modes\*.toml`. La CLI también los ve.
-- **Aviso de programas abiertos** (navegadores, editores, IDEs JetBrains, Ollama, LM Studio) vía Toolhelp32.
-- **Reiniciar como administrador** (UAC) desde la app.
-- Historial de limpiezas (`history.json`, últimas 500).
-- Builds **MSI** + **NSIS (.exe)**, icono, versión única en `Cargo.toml`. Firma opcional documentada.
-- Pendiente menor: firma de código real (requiere certificado), instancia única, bandeja del sistema.
+### Phase 2 — Desktop app ✅
+- Tauri 2 + Svelte 5. **Home** view (drives, mode shortcuts, history and total freed), **Clean** (live progress, filter, sort by size/age, quick selection Safe/All/None, warnings, confirmation, summary with errors) and **Settings**.
+- Persistent settings (`%APPDATA%\RCleaner\settings.json`): project folders (auto or manual), **exclusions** (respected when measuring and deleting), mode on startup.
+- **Custom modes** with a visual editor (or by duplicating a built-in one) → `%APPDATA%\RCleaner\modes\*.toml`. The CLI sees them too.
+- **Open-program warning** (browsers, editors, JetBrains IDEs, Ollama, LM Studio) via Toolhelp32.
+- **Restart as administrator** (UAC) from the app.
+- Cleanup history (`history.json`, last 500).
+- **MSI** + **NSIS (.exe)** builds, icon, single version in `Cargo.toml`. Optional signing documented.
+- Minor pending items: real code signing (needs a certificate), single instance, system tray.
 
-### Fase 3 — Analizador de disco (tipo WinDirStat) + duplicados
-- Escaneo paralelo de unidades (MFT opcional más adelante), árbol por tamaño, **treemap** (squarified) en canvas, top archivos, por extensión.
-- Duplicados: agrupar por tamaño → hash parcial (xxh3 4 KB inicio/fin) → blake3 completo; borrar a la papelera / hardlink.
-- Archivos grandes y antiguos.
+### Phase 3 — Space + duplicates + new UI ✅
+- **New interface** (see [DESIGN.md](DESIGN.md)): icon rail, one screen per tool with its own glyph, round button and color; results as rows per category.
+- `crp-disk` crate:
+  - **Space analyzer:** parallel walk (rayon, never follows links/junctions), compact in-memory tree, level-trimmed views, top large files, types by extension. Cloud files with no local copy count as 0 bytes. Full C:\ (≈3 M files) in ~35 s without admin.
+  - Navigable **radial map** (sunburst, DaisyDisk style) + folder list + a "tray" of items to delete.
+  - **Duplicates:** size → BLAKE3 of 16 KiB → full BLAKE3; rules out hard links; never reads OneDrive/Drive on-demand files (doesn't download them); skips AppData, `node_modules`, `.git`, Windows, Program Files… by default; auto-selection (keep the oldest/newest/shortest path). Never allows deleting every copy.
+- Everything deleted from Space/Duplicates goes to the **Recycle Bin** (`SHFileOperationW` + a warning if something doesn't fit) and goes through `safety::check_target` + the Windows/Program Files/ProgramData block.
+- CLI: `rcl space <path>` and `rcl dupes <paths…>`.
+- Pending: reading the MFT (faster with admin), alternative treemap, replacing duplicates with hard links.
 
-### Fase 4 — Desinstalador (tipo BCUninstaller) + herramientas dev
-- Inventario: `HKLM/HKCU\...\Uninstall` (+ WOW6432Node), MSIX/Store (`Get-AppxPackage`), winget.
-- Desinstalación masiva (silenciosa cuando haya `QuietUninstallString`/MSI `/qn`), cola secuencial.
-- Restos: carpetas en Program Files/AppData, claves huérfanas.
-- Dev: paquetes globales npm/pip sin uso, `wsl --list` / `wsl --unregister` (+ compactar VHDX), `docker system prune`, modelos IA por antigüedad de uso.
+### Phase 3.5 — Open project ✅
+- **Languages:** Spanish and English (Windows language by default) in the app, engine and CLI, from `locales/*.json`; adding one means adding a file.
+- Light / dark / system **theme**. Frameless window with custom buttons.
+- Documentation for contributors: README (en/es), CONTRIBUTING, code of conduct, SECURITY, translation guide, issue/PR templates and CI on GitHub Actions.
 
-### Fase 5 — Registro (con respaldo)
-- Entradas de desinstalación huérfanas, MUICache/rutas inexistentes, extensiones sin programa, inicio apuntando a archivos borrados, DLL compartidas faltantes.
-- Export `.reg` previo y restauración desde la app. Punto de restauración (`SystemRestore.CreateRestorePoint`).
+### Phase 4 — Uninstaller (BCUninstaller-style) + dev tools
+- Inventory: `HKLM/HKCU\...\Uninstall` (+ WOW6432Node), MSIX/Store (`Get-AppxPackage`), winget.
+- Bulk uninstall (silent when there's a `QuietUninstallString`/MSI `/qn`), sequential queue.
+- Leftovers: folders in Program Files/AppData, orphaned keys.
+- Dev: unused global npm/pip packages, `wsl --list` / `wsl --unregister` (+ compact VHDX), `docker system prune`, AI models by last use.
 
-### Fase 6 — Mantenimiento
-- Programas de inicio, tareas programadas, servicios.
-- Limpieza programada (Task Scheduler), `DISM /StartComponentCleanup`, `Windows.old`.
-- Salud de discos, actualizaciones de la app, firma de código, telemetría cero.
+### Phase 5 — Registry (with backup)
+- Orphaned uninstall entries, MUICache/missing paths, extensions with no program, startup entries pointing to deleted files, missing shared DLLs.
+- `.reg` export beforehand and restore from the app. Restore point (`SystemRestore.CreateRestorePoint`).
 
-## Qué NO se hará (a propósito)
-- Borrar **Prefetch**: empeora el arranque; Windows lo gestiona.
-- "Optimizadores" de RAM o del registro tipo placebo.
-- Borrar cookies/historial sin opción explícita (privacidad = módulo aparte, opt-in).
+### Phase 6 — Maintenance
+- Startup programs, scheduled tasks, services.
+- Scheduled cleanup (Task Scheduler), `DISM /StartComponentCleanup`, `Windows.old`.
+- Disk health, app updates, code signing, zero telemetry.
+
+## What we will NOT do (on purpose)
+- Delete **Prefetch**: it slows down startup; Windows manages it.
+- Placebo RAM or registry "optimizers".
+- Delete cookies/history without an explicit option (privacy = separate, opt-in module).

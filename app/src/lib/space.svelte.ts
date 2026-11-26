@@ -1,0 +1,131 @@
+// Estado del analizador de espacio. El árbol vive en Rust; aquí sólo la
+// vista actual (nodo, anillos, lista) y la "bandeja" de lo que se va a borrar.
+
+import { SvelteMap } from "svelte/reactivity";
+import {
+  api,
+  type Crumb,
+  type DeleteResult,
+  type DiskEntry,
+  type DiskFile,
+  type DiskProgress,
+  type DiskSummary,
+  type ViewNode,
+} from "./api";
+
+export type SpacePhase = "idle" | "scanning" | "results";
+export type SpaceTab = "folder" | "largest" | "types";
+
+const RINGS = 4;
+
+export interface Pick {
+  id: number;
+  name: string;
+  size: number;
+}
+
+class SpaceStore {
+  phase = $state<SpacePhase>("idle");
+  target = $state("");
+  summary = $state<DiskSummary | null>(null);
+  progress = $state<DiskProgress>({ files: 0, dirs: 0, bytes: 0, current: "" });
+
+  node = $state(0);
+  view = $state<ViewNode | null>(null);
+  entries = $state<DiskEntry[]>([]);
+  crumbs = $state<Crumb[]>([]);
+  largest = $state<DiskFile[]>([]);
+  tab = $state<SpaceTab>("folder");
+
+  /** Elementos marcados para mover a la papelera. */
+  readonly picks = new SvelteMap<number, Pick>();
+  picksBytes = $derived([...this.picks.values()].reduce((s, p) => s + p.size, 0));
+
+  error = $state<string | null>(null);
+  lastDelete = $state<DeleteResult | null>(null);
+
+  /** Recupera un análisis previo (al volver a la vista). */
+  async restore() {
+    if (this.phase !== "idle") return;
+    const s = await api.diskSummary();
+    if (s) {
+      this.summary = s;
+      this.phase = "results";
+      await this.open(s.root);
+    }
+  }
+
+  async scan(path: string) {
+    this.error = null;
+    this.target = path;
+    this.phase = "scanning";
+    this.progress = { files: 0, dirs: 0, bytes: 0, current: "" };
+    this.picks.clear();
+    this.lastDelete = null;
+    try {
+      this.summary = await api.diskScan(path);
+      this.tab = "folder";
+      await this.open(this.summary.root);
+      this.phase = "results";
+    } catch (e) {
+      const msg = String(e);
+      this.phase = this.summary ? "results" : "idle";
+      if (!msg.includes("cancel")) this.error = msg;
+    }
+  }
+
+  cancel() {
+    void api.cancel("disk");
+  }
+
+  /** Navega a un nodo: anillos, lista y migas. */
+  async open(id: number) {
+    const [view, entries, crumbs] = await Promise.all([
+      api.diskView(id, RINGS),
+      api.diskChildren(id),
+      api.diskCrumbs(id),
+    ]);
+    if (!view) return;
+    this.node = id;
+    this.view = view;
+    this.entries = entries;
+    this.crumbs = crumbs;
+    this.largest = this.tab === "largest" ? await api.diskLargest(id) : [];
+  }
+
+  async setTab(tab: SpaceTab) {
+    this.tab = tab;
+    if (tab === "largest") this.largest = await api.diskLargest(this.node);
+  }
+
+  up() {
+    if (this.crumbs.length > 1) void this.open(this.crumbs[this.crumbs.length - 2].id);
+  }
+
+  togglePick(p: Pick) {
+    if (this.picks.has(p.id)) this.picks.delete(p.id);
+    else this.picks.set(p.id, p);
+  }
+
+  async deletePicks() {
+    const ids = [...this.picks.keys()];
+    try {
+      this.lastDelete = await api.diskDelete(ids);
+      this.picks.clear();
+      this.summary = await api.diskSummary();
+      // El nodo actual pudo desaparecer: si no hay vista, volver a la raíz.
+      const view = await api.diskView(this.node, RINGS);
+      await this.open(view ? this.node : (this.summary?.root ?? 0));
+    } catch (e) {
+      this.error = String(e);
+    }
+  }
+
+  reset() {
+    this.phase = "idle";
+    this.picks.clear();
+    this.lastDelete = null;
+  }
+}
+
+export const space = new SpaceStore();

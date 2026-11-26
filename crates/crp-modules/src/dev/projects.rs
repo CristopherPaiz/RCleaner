@@ -6,7 +6,7 @@
 
 use crp_core::fsutil::measure_path;
 use crp_core::{
-    Action, Category, CleanerModule, Error, Finding, ModuleMeta, Result, Risk, ScanContext,
+    Action, Category, CleanerModule, Error, Finding, ModuleMeta, Result, Risk, ScanContext, t, tn,
 };
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
@@ -152,9 +152,7 @@ pub struct Projects {
 impl Projects {
     pub fn new() -> Self {
         Self {
-            meta: ModuleMeta::new("dev.projects", "Artefactos de proyectos", Category::Dev)
-                .describe("node_modules, target de Cargo, __pycache__, .venv y cachés de frameworks web dentro de tus carpetas de proyectos. Se regeneran con npm install / cargo build / etc.")
-                .risk(Risk::Moderate),
+            meta: ModuleMeta::new("dev.projects", Category::Dev).risk(Risk::Moderate),
         }
     }
 
@@ -231,8 +229,8 @@ impl CleanerModule for Projects {
             let paths = py.into_iter().map(|(p, _, _)| p).collect();
             findings.push(self.finding(
                 "python-caches".into(),
-                "Cachés de Python (__pycache__, .pytest_cache, .mypy_cache, .ruff_cache)".into(),
-                format!("{n} carpetas"),
+                t("module.dev.projects.python_caches"),
+                tn("module.dev.projects.folders", n as u64, &[]),
                 paths,
                 bytes,
                 items,
@@ -252,11 +250,10 @@ impl CleanerModule for Projects {
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default();
             let days = idle_days(&project, kind);
-            let idle = days.map_or_else(String::new, |d| format!(" · sin cambios hace {d} días"));
             findings.push(self.finding(
                 path.to_string_lossy().to_lowercase(),
                 format!("{dir_name} · {project_name}"),
-                format!("{}{idle}", project.display()),
+                path.display().to_string(),
                 vec![path],
                 stats.bytes,
                 stats.items,

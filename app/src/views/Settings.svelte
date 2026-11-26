@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, type Mode, type Settings } from "../lib/api";
   import { app } from "../lib/app.svelte";
+  import { LANGUAGES, resolveLang, t, tn } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
   import ModeEditor from "../components/ModeEditor.svelte";
 
@@ -10,6 +11,12 @@
   const roots = $derived(auto ? (app.info?.auto_dev_roots ?? []) : app.settings.dev_roots);
   const custom = $derived(app.modes.filter((m) => m.custom));
   const builtins = $derived(app.modes.filter((m) => !m.custom));
+  const systemLang = $derived(LANGUAGES.find((l) => l.code === resolveLang(navigator.language))?.name ?? "");
+  const THEMES = [
+    { id: null, label: "ui.settings.theme_system", icon: "monitor" },
+    { id: "light", label: "ui.settings.theme_light", icon: "sun" },
+    { id: "dark", label: "ui.settings.theme_dark", icon: "moon" },
+  ] as const;
 
   async function update(patch: Partial<Settings>) {
     try {
@@ -39,7 +46,7 @@
   }
 
   async function deleteMode(m: Mode) {
-    if (!confirm(`¿Borrar el modo "${m.name}"?`)) return;
+    if (!confirm(t("ui.settings.delete_mode", { name: m.name }))) return;
     try {
       await api.deleteMode(m.id);
       await app.reloadModes();
@@ -52,103 +59,148 @@
 
 <div class="page">
   <header>
-    <h1>Ajustes</h1>
-    <p class="muted">Se guardan al momento en <span class="mono">{app.info?.config_dir}</span></p>
+    <h1>{t("ui.nav.settings")}</h1>
+    <p class="faint">{t("ui.settings.saved_in")} <span class="mono">{app.info?.config_dir}</span></p>
   </header>
 
-  <section class="card">
-    <div class="head">
-      <div>
-        <h2>Carpetas de proyectos</h2>
-        <p class="muted">Dónde busca <span class="mono">node_modules</span>, <span class="mono">target</span>, <span class="mono">__pycache__</span>, <span class="mono">.venv</span>… (módulo "Artefactos de proyectos").</p>
+  <section>
+    <h2>{t("ui.settings.appearance")}</h2>
+    <div class="group">
+      <div class="item">
+        <span class="grow">{t("ui.settings.theme")}</span>
+        <div class="segmented">
+          {#each THEMES as th (th.label)}
+            <button class:on={app.settings.theme === th.id} onclick={() => app.setTheme(th.id)}>
+              <Icon name={th.icon} size={14} /> {t(th.label)}
+            </button>
+          {/each}
+        </div>
       </div>
-      <button class="ghost sm" onclick={() => addFolder("dev_roots")}><Icon name="plus" size={14} /> Añadir</button>
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.language")}
+          <span class="faint block">{t("ui.settings.language_hint")}</span>
+        </span>
+        <select
+          class="field"
+          value={app.settings.language ?? ""}
+          disabled={app.busy}
+          onchange={(e) => app.setLanguage((e.currentTarget as HTMLSelectElement).value || null)}
+        >
+          <option value="">{t("ui.settings.language_system", { name: systemLang })}</option>
+          {#each LANGUAGES as l (l.code)}<option value={l.code}>{l.name}</option>{/each}
+        </select>
+      </div>
     </div>
-    {#if auto}<p class="badge">Detección automática</p>{/if}
-    <ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div>
+        <h2>{t("ui.settings.dev_roots")}</h2>
+        <p class="faint">{t("ui.settings.dev_roots_hint")} <span class="mono">node_modules</span>, <span class="mono">target</span>, <span class="mono">__pycache__</span>, <span class="mono">.venv</span>…</p>
+      </div>
+      <button class="btn small" onclick={() => addFolder("dev_roots")}><Icon name="plus" size={14} /> {t("ui.common.add")}</button>
+    </div>
+    <div class="group">
       {#each roots as p (p)}
-        <li>
-          <Icon name="folder" size={15} />
-          <span class="path">{p}</span>
-          <button class="icon-btn" title="Quitar" onclick={() => removeFolder("dev_roots", p)}><Icon name="x" size={14} /></button>
-        </li>
+        <div class="item">
+          <Icon name="folder" size={16} />
+          <span class="ellipsis grow">{p}</span>
+          {#if auto}<span class="faint small">{t("ui.settings.auto")}</span>{/if}
+          <button class="icon-btn" title={t("ui.common.remove")} onclick={() => removeFolder("dev_roots", p)}><Icon name="x" size={14} /></button>
+        </div>
       {:else}
-        <li class="muted">Ninguna carpeta.</li>
+        <div class="item faint">{t("ui.settings.no_folders")}</div>
       {/each}
-    </ul>
+    </div>
     {#if !auto}
-      <button class="link" onclick={() => update({ dev_roots: [] })}>Volver a detección automática</button>
+      <button class="link small" onclick={() => update({ dev_roots: [] })}>{t("ui.settings.back_to_auto")}</button>
     {/if}
   </section>
 
-  <section class="card">
-    <div class="head">
+  <section>
+    <div class="sec-head">
       <div>
-        <h2>Exclusiones</h2>
-        <p class="muted">Carpetas que Clean-CRP nunca analiza ni borra (ni su contenido).</p>
+        <h2>{t("ui.settings.exclusions")}</h2>
+        <p class="faint">{t("ui.settings.exclusions_hint")}</p>
       </div>
-      <button class="ghost sm" onclick={() => addFolder("exclusions")}><Icon name="plus" size={14} /> Añadir</button>
+      <button class="btn small" onclick={() => addFolder("exclusions")}><Icon name="plus" size={14} /> {t("ui.common.add")}</button>
     </div>
-    <ul>
+    <div class="group">
       {#each app.settings.exclusions as p (p)}
-        <li>
-          <Icon name="shield" size={15} />
-          <span class="path">{p}</span>
-          <button class="icon-btn" title="Quitar" onclick={() => removeFolder("exclusions", p)}><Icon name="x" size={14} /></button>
-        </li>
+        <div class="item">
+          <Icon name="shield" size={16} />
+          <span class="ellipsis grow">{p}</span>
+          <button class="icon-btn" title={t("ui.common.remove")} onclick={() => removeFolder("exclusions", p)}><Icon name="x" size={14} /></button>
+        </div>
       {:else}
-        <li class="muted">Sin exclusiones.</li>
+        <div class="item faint">{t("ui.settings.no_exclusions")}</div>
       {/each}
-    </ul>
+    </div>
   </section>
 
-  <section class="card">
-    <h2>Modo al abrir</h2>
-    <select
-      value={app.settings.default_mode ?? ""}
-      onchange={(e) => update({ default_mode: (e.currentTarget as HTMLSelectElement).value || null })}
-    >
-      <option value="">Rápido (por defecto)</option>
-      {#each app.modes as m (m.id)}<option value={m.id}>{m.name}</option>{/each}
-    </select>
-  </section>
-
-  <section class="card">
-    <div class="head">
-      <div>
-        <h2>Modos personalizados</h2>
-        <p class="muted">Combina los módulos que quieras. Se guardan como TOML en <span class="mono">modes\</span>.</p>
+  <section>
+    <h2>{t("ui.nav.clean")}</h2>
+    <div class="group">
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.default_mode")}
+          <span class="faint block">{t("ui.settings.default_mode_hint")}</span>
+        </span>
+        <select
+          class="field"
+          value={app.settings.default_mode ?? ""}
+          onchange={(e) => update({ default_mode: (e.currentTarget as HTMLSelectElement).value || null })}
+        >
+          <option value="">{app.modes.find((m) => m.id === "rapido")?.name ?? "—"}</option>
+          {#each app.modes.filter((m) => m.id !== "rapido") as m (m.id)}<option value={m.id}>{m.name}</option>{/each}
+        </select>
       </div>
-      <button class="primary sm" onclick={() => (editor = { initial: null, editing: false })}>
-        <Icon name="plus" size={14} /> Nuevo modo
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div>
+        <h2>{t("ui.settings.custom_modes")}</h2>
+        <p class="faint">{t("ui.settings.custom_modes_hint")} <span class="mono">modes</span>.</p>
+      </div>
+      <button class="btn small accent" onclick={() => (editor = { initial: null, editing: false })}>
+        <Icon name="plus" size={14} /> {t("ui.mode_editor.new")}
       </button>
     </div>
-    <ul>
+    <div class="group">
       {#each custom as m (m.id)}
-        <li>
-          <Icon name={m.icon || "star"} size={15} />
-          <span class="path"><strong>{m.name}</strong> <span class="muted">· {m.modules.length} selectores</span></span>
-          <button class="icon-btn" title="Editar" onclick={() => (editor = { initial: m, editing: true })}><Icon name="edit" size={14} /></button>
-          <button class="icon-btn" title="Borrar" onclick={() => deleteMode(m)}><Icon name="trash" size={14} /></button>
-        </li>
-      {:else}
-        <li class="muted">Aún no tienes modos propios. Puedes partir de uno incluido:</li>
+        <div class="item">
+          <Icon name={m.icon || "star"} size={16} />
+          <span class="grow">{m.name} <span class="faint">· {tn("ui.settings.selectors", m.modules.length)}</span></span>
+          <button class="icon-btn" title={t("ui.common.edit")} onclick={() => (editor = { initial: m, editing: true })}><Icon name="edit" size={14} /></button>
+          <button class="icon-btn" title={t("ui.common.delete")} onclick={() => deleteMode(m)}><Icon name="trash" size={14} /></button>
+        </div>
       {/each}
-    </ul>
-    <div class="dup">
-      {#each builtins as m (m.id)}
-        <button class="ghost sm" onclick={() => (editor = { initial: m, editing: false })}>Duplicar "{m.name}"</button>
-      {/each}
+      <div class="item dup">
+        <span class="faint">{t("ui.settings.start_from")}</span>
+        {#each builtins as m (m.id)}
+          <button class="btn quiet small" onclick={() => (editor = { initial: m, editing: false })}>
+            <Icon name={m.icon || "star"} size={14} /> {m.name}
+          </button>
+        {/each}
+      </div>
     </div>
     {#each app.modeErrors as e (e)}<p class="error">{e}</p>{/each}
   </section>
 
-  <section class="card about">
-    <h2>Acerca de</h2>
-    <p>Clean-CRP v{app.info?.version} · {app.modules.length} módulos de limpieza</p>
-    {#if app.info}
-      <button class="link" onclick={() => api.reveal(app.info!.config_dir)}>Abrir carpeta de ajustes</button>
-    {/if}
+  <section>
+    <h2>{t("ui.settings.about")}</h2>
+    <div class="group">
+      <div class="item">
+        <span class="grow">RCleaner {app.info?.version} <span class="faint">· {tn("ui.settings.module_count", app.modules.length)}</span></span>
+        {#if app.info}
+          <button class="btn small" onclick={() => api.reveal(app.info!.config_dir)}><Icon name="external" size={14} /> {t("ui.settings.config_folder")}</button>
+        {/if}
+      </div>
+    </div>
   </section>
 </div>
 
@@ -157,22 +209,24 @@
 {/if}
 
 <style>
-  .page { padding: 22px 28px 32px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
-  header h1 { margin: 0 0 4px; font-size: 22px; }
-  header p { margin: 0 0 4px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
-  h2 { font-size: 15px; margin: 0 0 4px; }
-  .card p { margin: 0 0 10px; font-size: 13px; }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-  .head button { flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
-  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--accent-bg); color: var(--accent); }
-  ul { list-style: none; margin: 0 0 8px; padding: 0; }
-  li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); color: var(--muted); }
-  li:last-child { border-bottom: 0; }
-  .path { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .icon-btn { background: none; border: 0; color: var(--muted); cursor: pointer; display: grid; place-items: center; padding: 4px; border-radius: 6px; }
-  .icon-btn:hover { background: var(--hover); color: var(--danger); }
-  select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; min-width: 240px; }
-  .dup { display: flex; flex-wrap: wrap; gap: 6px; }
-  .error { color: var(--danger); }
+  .page { flex: 1; overflow: auto; padding: 4px 32px 40px; display: flex; flex-direction: column; gap: 28px; max-width: 900px; width: 100%; margin: 0 auto; }
+  header h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin-bottom: 4px; }
+  section > h2 { margin-bottom: 10px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 10px; }
+  .sec-head p { font-size: 13px; }
+  .group { display: flex; flex-direction: column; gap: 2px; border-radius: 12px; overflow: hidden; }
+  .item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 52px;
+    background: var(--raise); color: var(--text-3);
+  }
+  .item .grow { color: var(--text); }
+  .grow { flex: 1; min-width: 0; }
+  .block { display: block; font-size: 12px; }
+  .small { font-size: 12px; }
+  .link.small { margin-top: 8px; }
+  .dup { flex-wrap: wrap; gap: 4px; }
+  .dup > .faint { margin-right: 6px; font-size: 13px; }
+  .field { min-width: 200px; }
+  .error { color: var(--bad); font-size: 13px; margin-top: 8px; }
 </style>

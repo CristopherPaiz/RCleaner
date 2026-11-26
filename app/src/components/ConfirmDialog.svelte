@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Finding } from "../lib/api";
-  import { formatBytes } from "../lib/format";
+  import { riskLabel, formatBytes } from "../lib/format";
+  import { t, tn } from "../lib/i18n.svelte";
+  import Modal from "./Modal.svelte";
 
   interface Props {
     findings: Finding[];
@@ -13,33 +15,27 @@
   const risky = $derived(findings.filter((f) => f.risk !== "safe"));
 </script>
 
-<div class="backdrop" role="presentation" onclick={oncancel}>
-  <div class="dialog" role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === "Escape" && oncancel()}>
-    <h2>¿Limpiar {formatBytes(bytes)}?</h2>
-    <p>Se eliminarán {findings.length} elementos. Esta acción no se puede deshacer.</p>
-    {#if risky.length > 0}
-      <div class="warn">
-        <strong>{risky.length} elementos no son "Seguros":</strong>
-        <ul>
-          {#each risky.slice(0, 6) as f (f.id)}
-            <li>{f.label} · {formatBytes(f.bytes)}</li>
-          {/each}
-          {#if risky.length > 6}<li>… y {risky.length - 6} más</li>{/if}
-        </ul>
-      </div>
-    {/if}
-    <div class="buttons">
-      <button class="ghost" onclick={oncancel}>Cancelar</button>
-      <button class="danger" onclick={onconfirm}>Limpiar</button>
+<Modal title={t("ui.confirm.title", { size: formatBytes(bytes) })} onclose={oncancel}>
+  <p class="dim">{tn("ui.confirm.text", findings.length)}</p>
+  {#if risky.length > 0}
+    <div class="warn">
+      <p><strong>{tn("ui.confirm.risky", risky.length)}</strong></p>
+      <ul>
+        {#each risky.slice(0, 6) as f (f.id)}
+          <li><span class="risk {f.risk}">{riskLabel(f.risk)}</span> {f.label} · {formatBytes(f.bytes)}</li>
+        {/each}
+        {#if risky.length > 6}<li class="faint">{t("ui.common.and_more", { n: risky.length - 6 })}</li>{/if}
+      </ul>
     </div>
-  </div>
-</div>
+  {/if}
+  {#snippet buttons()}
+    <button class="btn" onclick={oncancel}>{t("ui.common.cancel")}</button>
+    <button class="btn accent" onclick={onconfirm}>{t("ui.clean.clean")}</button>
+  {/snippet}
+</Modal>
 
 <style>
-  .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 0.45); display: grid; place-items: center; }
-  .dialog { width: min(520px, 92vw); background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; }
-  h2 { margin: 0 0 8px; }
-  .warn { margin: 14px 0; padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 13px; }
-  ul { margin: 6px 0 0; padding-left: 18px; }
-  .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .warn { margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 10%, transparent); font-size: 13px; }
+  ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  li { display: flex; gap: 8px; align-items: center; }
 </style>

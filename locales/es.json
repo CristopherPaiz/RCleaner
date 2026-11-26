@@ -1,0 +1,479 @@
+{
+  "_meta": { "name": "Español" },
+
+  "category": {
+    "system": "Sistema",
+    "browser": "Navegadores",
+    "dev": "Desarrollo",
+    "ai": "Modelos de IA",
+    "apps": "Aplicaciones",
+    "registry": "Registro"
+  },
+  "risk": { "safe": "Seguro", "moderate": "Moderado", "advanced": "Avanzado" },
+
+  "mode": {
+    "rapido": { "name": "Rápido", "desc": "Temporales, miniaturas, informes de errores, cachés de navegador y papelera. Seguro para cualquiera." },
+    "programador": { "name": "Programador", "desc": "Todo lo de Rápido más cachés de pip/uv/npm/pnpm/cargo/gradle/NuGet/Go, editores, artefactos de proyectos (node_modules, target, __pycache__) y modelos de IA." },
+    "ia": { "name": "IA / ML", "desc": "Modelos descargados (Ollama, Hugging Face, LM Studio, Torch) y cachés de Python." },
+    "gamer": { "name": "Gamer", "desc": "Rápido + cachés de shaders, Delivery Optimization y descargas de Windows Update." },
+    "profundo": { "name": "Profundo", "desc": "Todos los módulos. Revisa los elementos moderados y avanzados antes de limpiar." }
+  },
+
+  "module": {
+    "system": {
+      "user_temp": {
+        "name": "Temporales del usuario",
+        "desc": "Archivos de %TEMP% con más de 24 h. Los recientes se conservan por si hay una instalación en curso.",
+        "target": { "temp": "Temporales del usuario (%TEMP%)" }
+      },
+      "windows_temp": {
+        "name": "Temporales de Windows",
+        "desc": "C:\\Windows\\Temp con más de 24 h.",
+        "target": { "temp": "Temporales de Windows" }
+      },
+      "thumbnails": {
+        "name": "Miniaturas",
+        "desc": "Caché de miniaturas del Explorador (thumbcache_*.db). Se regenera al navegar carpetas.",
+        "target": { "thumbcache": "Caché de miniaturas" },
+        "detail": { "thumbcache": "El Explorador bloquea algunas; esas se omiten." }
+      },
+      "wer": {
+        "name": "Informes de errores",
+        "desc": "Informes de Windows Error Reporting (bloqueos de apps) ya enviados o en cola.",
+        "target": { "user": "Informes de errores (usuario)", "system": "Informes de errores (sistema)" }
+      },
+      "crash_dumps": {
+        "name": "Volcados de memoria",
+        "desc": "Volcados generados cuando una app o Windows se cuelga. Sólo útiles para depurar.",
+        "target": { "user": "Volcados de aplicaciones", "minidump": "Minidumps del sistema", "memory": "MEMORY.DMP" }
+      },
+      "windows_logs": {
+        "name": "Registros de Windows",
+        "desc": "Archivos de C:\\Windows\\Logs con más de 7 días (CBS, DISM, WindowsUpdate…).",
+        "target": { "logs": "Logs de Windows (+7 días)" }
+      },
+      "shader_cache": {
+        "name": "Cachés de shaders",
+        "desc": "Shaders compilados de DirectX y de los drivers NVIDIA/AMD/Intel. Se recompilan al jugar (puede haber tirones la primera vez).",
+        "target": { "d3d": "DirectX (D3DSCache)", "gpu": "Drivers de GPU", "steam": "Steam (shadercache)" },
+        "detail": { "steam": "Steam los vuelve a descargar o compilar al abrir cada juego." }
+      },
+      "delivery_optimization": {
+        "name": "Delivery Optimization",
+        "desc": "Caché P2P de actualizaciones de Windows y de la Store.",
+        "target": { "cache": "Caché de Delivery Optimization" }
+      },
+      "windows_update": {
+        "name": "Descargas de Windows Update",
+        "desc": "Paquetes ya descargados en SoftwareDistribution\\Download.",
+        "target": { "download": "Descargas de Windows Update" },
+        "detail": { "download": "Si hay una actualización en curso, sus archivos estarán en uso y se omitirán." }
+      },
+      "recycle_bin": {
+        "name": "Papelera de reciclaje",
+        "desc": "Vacía la papelera de todas las unidades. Lo que haya dentro se elimina definitivamente.",
+        "detail": "Se elimina definitivamente."
+      }
+    },
+    "browser": {
+      "chromium": {
+        "desc": "Caché web, de código y de GPU de todos los perfiles.",
+        "cache": "Caché de {name}",
+        "service_workers": "Service Workers de {name}",
+        "service_workers_detail": "Datos offline de sitios y PWAs; se vuelven a descargar al visitarlos."
+      },
+      "firefox": {
+        "name": "Mozilla Firefox",
+        "desc": "Caché web (cache2), startupCache y miniaturas de todos los perfiles.",
+        "target": { "cache": "Caché de Firefox" }
+      }
+    },
+    "dev": {
+      "pip": { "name": "Caché de pip", "desc": "Paquetes descargados por pip (wheels y http). Equivale a `pip cache purge`.", "target": { "cache": "Caché de pip" } },
+      "uv": { "name": "Caché de uv", "desc": "Caché de uv (Astral). Los entornos ya creados siguen funcionando.", "target": { "cache": "Caché de uv" } },
+      "poetry": { "name": "Caché de Poetry", "desc": "Paquetes y artefactos descargados por Poetry.", "target": { "cache": "Caché de Poetry" } },
+      "conda": { "name": "Paquetes de conda", "desc": "Tarballs (.conda/.tar.bz2) ya extraídos en pkgs. Equivale a `conda clean --tarballs`.", "target": { "tarballs": "Tarballs de conda" } },
+      "npm": { "name": "Caché de npm", "desc": "Caché de npm (_cacache, _npx, _logs). Equivale a `npm cache clean --force`.", "target": { "cache": "Caché de npm" } },
+      "pnpm": {
+        "name": "Almacén de pnpm",
+        "desc": "Content-addressable store de pnpm. Los node_modules existentes siguen funcionando (hardlinks).",
+        "target": { "store": "Store de pnpm" },
+        "detail": { "store": "Tras limpiar, pnpm volverá a descargar paquetes al instalar." }
+      },
+      "yarn": { "name": "Caché de Yarn", "desc": "Caché de Yarn clásico y Yarn Berry.", "target": { "cache": "Caché de Yarn" } },
+      "bun": { "name": "Caché de Bun", "desc": "Paquetes descargados por Bun.", "target": { "cache": "Caché de Bun" } },
+      "cargo": {
+        "name": "Caché de Cargo",
+        "desc": "Crates descargados y extraídos (registry/cache, registry/src, git/checkouts).",
+        "target": { "registry": "Caché de Cargo" },
+        "detail": { "registry": "Se vuelven a descargar en la próxima compilación (no funcionará sin conexión)." }
+      },
+      "go": { "name": "Cachés de Go", "desc": "Caché de compilación (go-build) y módulos descargados.", "target": { "build": "Caché de compilación de Go", "mod": "Módulos de Go" } },
+      "gradle": {
+        "name": "Cachés de Gradle",
+        "desc": "Dependencias, distribuciones del wrapper y logs del daemon.",
+        "target": { "caches": "Caché de Gradle", "wrapper": "Distribuciones del Gradle Wrapper", "daemon": "Logs del daemon de Gradle" }
+      },
+      "maven": { "name": "Repositorio de Maven", "desc": "Dependencias descargadas en ~/.m2/repository.", "target": { "repo": "Repositorio local de Maven" } },
+      "nuget": {
+        "name": "Cachés de NuGet",
+        "desc": "Paquetes globales y cachés HTTP de NuGet. Equivale a `dotnet nuget locals all --clear`.",
+        "target": { "http": "Caché HTTP de NuGet", "packages": "Paquetes globales de NuGet" }
+      },
+      "editors": {
+        "name": "Cachés de editores",
+        "desc": "VS Code, Cursor, VSCodium y Windsurf: cachés, VSIX descargados y logs. No toca extensiones ni ajustes.",
+        "cache_of": "Caché de {name}"
+      },
+      "jetbrains": {
+        "name": "Cachés de JetBrains",
+        "desc": "Cachés e índices de IntelliJ, PyCharm, WebStorm, Rider… (se re-indexa al abrir).",
+        "target": { "caches": "Cachés de IDEs JetBrains" }
+      },
+      "projects": {
+        "name": "Artefactos de proyectos",
+        "desc": "node_modules, target de Cargo, __pycache__, .venv y cachés de frameworks web dentro de tus carpetas de proyectos. Se regeneran con npm install / cargo build / etc.",
+        "python_caches": "Cachés de Python (__pycache__, .pytest_cache, .mypy_cache, .ruff_cache)",
+        "folders_one": "{n} carpeta",
+        "folders_other": "{n} carpetas"
+      }
+    },
+    "ai": {
+      "ollama": {
+        "name": "Modelos de Ollama",
+        "desc": "Cada modelo descargado con `ollama pull`. Al borrar se conservan las capas compartidas con otros modelos.",
+        "total": "Tamaño total {size}",
+        "shared": "{size} compartido con otros modelos",
+        "bad_manifest": "manifiesto ilegible: {path}"
+      },
+      "huggingface": {
+        "name": "Hugging Face",
+        "desc": "Modelos y datasets del hub de Hugging Face (transformers, diffusers, hf download…), uno por uno.",
+        "kind": { "model": "Modelo", "dataset": "Dataset", "space": "Space" }
+      },
+      "lmstudio": { "name": "Modelos de LM Studio", "desc": "Modelos GGUF/MLX descargados en LM Studio, uno por uno." },
+      "misc": {
+        "name": "Otros cachés de IA",
+        "desc": "Checkpoints de Torch Hub, modelos de Whisper y de Keras.",
+        "target": { "torch": "Torch Hub", "whisper": "Modelos de Whisper", "keras": "Modelos de Keras" }
+      }
+    }
+  },
+
+  "core": {
+    "app_running": "{name} está abierto ({exe}): ciérralo para liberar todo; los archivos en uso se omitirán.",
+    "module_panic": "el módulo falló inesperadamente",
+    "mode_exists": "el modo '{id}' ya existe; cambia su id",
+    "mode_bad_id": "id inválido: usa minúsculas, números, '-' o '_'",
+    "mode_builtin": "'{id}' es un modo incluido",
+    "mode_incomplete": "el modo necesita nombre y al menos un módulo"
+  },
+  "error": {
+    "io": "E/S en {path}: {error}",
+    "protected": "ruta protegida, no se puede limpiar: {path}",
+    "requires_admin": "se requieren permisos de administrador",
+    "cancelled": "operación cancelada",
+    "unsupported": "el módulo '{id}' no implementa limpieza personalizada",
+    "unknown_module": "módulo desconocido: {id}",
+    "command": "el comando '{program}' falló: {error}",
+    "config": "configuración inválida: {error}",
+    "not_in_path": "no se encontró en PATH",
+    "not_a_folder": "no es una carpeta"
+  },
+  "disk": {
+    "small_items_one": "{n} elemento pequeño",
+    "small_items_other": "{n} elementos pequeños"
+  },
+  "protect": {
+    "hiberfil": "Archivo de hibernación. Windows lo usa para hibernar y para el inicio rápido. Para liberarlo, ejecuta `powercfg /h off` como administrador.",
+    "pagefile": "Memoria virtual de Windows. Cambia su tamaño en Configuración → Sistema → Información → Configuración avanzada del sistema → Rendimiento.",
+    "swapfile": "Memoria virtual que Windows usa para las apps. Se gestiona junto con pagefile.sys.",
+    "registry": "Parte del registro de tu usuario. Borrarlo rompería tu cuenta de Windows.",
+    "boot": "Necesario para arrancar Windows.",
+    "recycle_bin": "Papelera de reciclaje. Vacíala desde Limpieza.",
+    "restore": "Puntos de restauración y datos del sistema. Los gestiona Windows (Protección del sistema).",
+    "windows_old": "Windows anterior o archivos de actualización. Quítalos en Configuración → Sistema → Almacenamiento → Archivos temporales.",
+    "installed": "Pertenece a Windows o a un programa instalado. Desinstala el programa.",
+    "drive_root": "Elemento de primer nivel de una unidad. Ábrelo y elige qué hay dentro.",
+    "base_folder": "Carpeta base de un perfil de usuario o de las apps de Windows. Ábrela y elige qué hay dentro.",
+    "system_file": "Windows lo marca como archivo de sistema."
+  },
+
+  "app": {
+    "stale_scan": "Algunos elementos ya no existen; vuelve a analizar.",
+    "unknown_path": "Ruta desconocida",
+    "elevate_failed": "No se pudo elevar: {error}",
+    "system_path": "{path} es del sistema o de un programa instalado",
+    "bad_path": "Ruta no válida",
+    "no_permission": "Sin permiso para leer esa carpeta",
+    "unknown_item": "Elemento desconocido",
+    "no_analysis": "No hay análisis; vuelve a analizar.",
+    "item_gone": "Un elemento ya no existe; vuelve a analizar.",
+    "analysis_dropped": "El análisis se descartó",
+    "pick_existing_folder": "Elige al menos una carpeta que exista",
+    "search_cancelled": "Búsqueda cancelada",
+    "unknown_file": "Archivo desconocido",
+    "no_search": "No hay búsqueda; vuelve a buscar.",
+    "file_gone": "Un archivo ya no está en la lista",
+    "keep_one_copy": "Deja al menos una copia de cada archivo"
+  },
+
+  "ui": {
+    "nav": { "aria": "Secciones", "home": "Resumen", "clean": "Limpieza", "space": "Espacio", "dupes": "Duplicados", "settings": "Ajustes" },
+    "admin": {
+      "label": "Admin",
+      "restart": "Reiniciar como administrador",
+      "running": "Ejecutando como administrador",
+      "confirm": "RCleaner se reiniciará como administrador para poder limpiar carpetas del sistema. ¿Continuar?"
+    },
+    "window": { "minimize": "Minimizar", "maximize": "Maximizar", "restore": "Restaurar", "close": "Cerrar" },
+    "common": {
+      "working": "En curso",
+      "close": "Cerrar",
+      "stop": "Detener",
+      "done": "Listo",
+      "filter": "Filtrar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "add": "Añadir",
+      "edit": "Editar",
+      "delete": "Borrar",
+      "remove": "Quitar",
+      "local_disk": "Disco local",
+      "show_in_explorer": "Mostrar en el Explorador",
+      "to_bin": "A la papelera",
+      "move_to_bin": "Mover a la papelera",
+      "moved_to_bin": "movidos a la papelera",
+      "and_more": "… y {n} más",
+      "tap_to_stop": "Toca el círculo para detener",
+      "no_match": "Nada coincide con el filtro.",
+      "items_one": "{n} elemento",
+      "items_other": "{n} elementos",
+      "files_one": "{n} archivo",
+      "files_other": "{n} archivos",
+      "folders_one": "{n} carpeta",
+      "folders_other": "{n} carpetas",
+      "modules_one": "{n} módulo",
+      "modules_other": "{n} módulos"
+    },
+    "age": {
+      "today": "hoy",
+      "yesterday": "ayer",
+      "days_one": "hace {n} día",
+      "days_other": "hace {n} días",
+      "months_one": "hace {n} mes",
+      "months_other": "hace {n} meses",
+      "years_one": "hace {n} año",
+      "years_other": "hace {n} años"
+    },
+    "home": {
+      "free": "libres",
+      "free_n": "{size} libres",
+      "usage": "{used} usados de {total} · {pct} % lleno",
+      "clean_text": "Temporales, cachés y restos",
+      "space_text": "Qué ocupa tu disco",
+      "dupes_text": "Copias de más",
+      "last_clean": "Última limpieza",
+      "last_n": "{size} en las últimas {n}",
+      "never": "Aún no has limpiado nada.",
+      "quick_clean": "Limpieza rápida"
+    },
+    "clean": {
+      "title": "Limpieza",
+      "lead": "Temporales, cachés y restos que sobran. Analizar nunca borra nada.",
+      "mode": "Modo",
+      "analyze": "Analizar",
+      "analyzing": "Analizando…",
+      "preparing": "Preparando",
+      "progress": "{done} de {total} módulos · toca el círculo para detener",
+      "freed": "liberados · {n} elementos en {secs} s",
+      "skipped_one": "{n} archivo estaba en uso o sin permiso y se dejó.",
+      "skipped_other": "{n} archivos estaban en uso o sin permiso y se dejaron.",
+      "problems_one": "Ver {n} elemento con avisos",
+      "problems_other": "Ver {n} elementos con avisos",
+      "selected_of": "seleccionados de {total} encontrados · {mode}",
+      "sort_size": "Tamaño",
+      "sort_age": "Antigüedad",
+      "mark": "Marcar",
+      "mark_safe": "Lo seguro",
+      "mark_all": "Todo",
+      "mark_none": "Nada",
+      "needs_admin": "Algunos elementos necesitan permisos de administrador (botón Admin del menú).",
+      "cleaning": "Limpiando {done} de {total}",
+      "restart": "Empezar de nuevo",
+      "clean": "Limpiar"
+    },
+    "results": {
+      "select_group": "Seleccionar {name}",
+      "warnings_one": "{n} con aviso",
+      "warnings_other": "{n} con aviso",
+      "marked": "{size} marcados",
+      "requires_admin": "Requiere administrador",
+      "errors_one": "{n} módulo con errores",
+      "errors_other": "{n} módulos con errores"
+    },
+    "confirm": {
+      "title": "¿Limpiar {size}?",
+      "text_one": "Se eliminará {n} elemento. Esta acción no se puede deshacer.",
+      "text_other": "Se eliminarán {n} elementos. Esta acción no se puede deshacer.",
+      "risky_one": "{n} elemento no es de riesgo «Seguro»",
+      "risky_other": "{n} elementos no son de riesgo «Seguro»"
+    },
+    "space": {
+      "title": "Espacio",
+      "lead": "Descubre qué ocupa tu disco, carpeta por carpeta. Nada se borra sin que lo elijas.",
+      "free_of": "{free} libres de {total}",
+      "pick_folder": "Elegir una carpeta…",
+      "path": "Ruta",
+      "other_drive": "Otra unidad",
+      "tab_folder": "Contenido",
+      "tab_largest": "Archivos grandes",
+      "tab_types": "Tipos",
+      "pick": "Añadir a la lista para eliminar",
+      "unpick": "Quitar de la lista",
+      "empty_folder": "Carpeta vacía.",
+      "no_files": "Sin archivos.",
+      "types_note": "Toda la unidad analizada, por tipo de archivo.",
+      "no_ext": "sin ext.",
+      "total_in": "{size} en {files}",
+      "free_on": "{size} libres en {drive}",
+      "unreadable_one": "{n} carpeta sin acceso",
+      "unreadable_other": "{n} carpetas sin acceso",
+      "use_admin": "(usa Admin)",
+      "picked_one": "{n} elegido",
+      "picked_other": "{n} elegidos",
+      "clear_picks": "vaciar",
+      "hint_before": "Usa",
+      "hint_after": "para elegir qué eliminar",
+      "confirm_title": "¿Mover {size} a la papelera?",
+      "confirm_text": "Podrás restaurarlo desde la Papelera de reciclaje. Si algo no cabe en ella, Windows te avisará antes de borrarlo."
+    },
+    "sunburst": {
+      "aria": "Mapa de uso de {name}",
+      "open": "Clic para entrar",
+      "grouped": "Agrupados",
+      "file": "Archivo",
+      "up": "subir"
+    },
+    "dupes": {
+      "title": "Duplicados",
+      "lead": "Encuentra copias exactas de tus archivos. Se comparan por contenido, no por nombre.",
+      "search": "Buscar",
+      "comparing": "Comparando…",
+      "candidates": "{done} de {total} candidatos",
+      "listing": "Buscando archivos…",
+      "checked": "{n} revisados",
+      "add_folder": "Añadir carpeta",
+      "min_size": "Ignorar archivos de menos de",
+      "include_system": "Incluir carpetas de sistema y de desarrollo",
+      "summary": "en copias de más · {groups} · {files}",
+      "groups_one": "{n} grupo",
+      "groups_other": "{n} grupos",
+      "files_checked_one": "{n} archivo revisado",
+      "files_checked_other": "{n} archivos revisados",
+      "filter_path": "Filtrar por ruta",
+      "mark_keep": "Marcar todo y conservar",
+      "keep_oldest": "el más antiguo",
+      "keep_newest": "el más reciente",
+      "keep_shortest": "la ruta más corta",
+      "unmark_all": "Desmarcar todo",
+      "cloud_skipped_one": "{n} archivo en la nube sin copia local no se revisó",
+      "cloud_skipped_other": "{n} archivos en la nube sin copia local no se revisaron",
+      "mark_file": "Marcar {path}",
+      "kept": "Se conserva",
+      "none": "No hay duplicados con estos criterios.",
+      "show_more": "Mostrar {n} grupos más",
+      "new_search": "Nueva búsqueda",
+      "marked_one": "{n} copia marcada",
+      "marked_other": "{n} copias marcadas",
+      "confirm_title_one": "¿Mover {n} copia a la papelera?",
+      "confirm_title_other": "¿Mover {n} copias a la papelera?",
+      "confirm_text": "Liberarás {size}. De cada archivo se conserva al menos una copia, y podrás restaurar lo eliminado desde la Papelera de reciclaje."
+    },
+    "mode_editor": {
+      "aria": "Editor de modo",
+      "new": "Nuevo modo",
+      "edit": "Editar modo",
+      "copy_of": "{name} (copia)",
+      "name": "Nombre",
+      "name_ph": "Mi limpieza semanal",
+      "desc": "Descripción",
+      "desc_ph": "Qué limpia y cuándo usarlo",
+      "icon": "Icono",
+      "err_name": "Ponle un nombre.",
+      "err_id": "El nombre necesita letras o números.",
+      "err_modules": "Elige al menos un módulo."
+    },
+    "settings": {
+      "saved_in": "Se guardan al momento en",
+      "appearance": "Apariencia",
+      "theme": "Tema",
+      "theme_system": "Sistema",
+      "theme_light": "Claro",
+      "theme_dark": "Oscuro",
+      "language": "Idioma",
+      "language_hint": "¿Falta el tuyo? Puedes ayudar a traducir RCleaner en GitHub.",
+      "language_system": "Del sistema ({name})",
+      "dev_roots": "Carpetas de proyectos",
+      "dev_roots_hint": "Dónde buscar",
+      "auto": "automática",
+      "no_folders": "Ninguna carpeta.",
+      "back_to_auto": "Volver a la detección automática",
+      "exclusions": "Exclusiones",
+      "exclusions_hint": "Carpetas que RCleaner nunca analiza ni borra, en ninguna sección.",
+      "no_exclusions": "Sin exclusiones.",
+      "default_mode": "Modo predeterminado",
+      "default_mode_hint": "El que usa «Limpieza rápida» y el que aparece al abrir.",
+      "custom_modes": "Modos personalizados",
+      "custom_modes_hint": "Combina los módulos que quieras. Se guardan como TOML en la carpeta",
+      "selectors_one": "{n} selector",
+      "selectors_other": "{n} selectores",
+      "start_from": "Partir de uno incluido:",
+      "delete_mode": "¿Borrar el modo «{name}»?",
+      "about": "Acerca de",
+      "module_count_one": "{n} módulo de limpieza",
+      "module_count_other": "{n} módulos de limpieza",
+      "config_folder": "Carpeta de ajustes"
+    }
+  },
+
+  "cli": {
+    "custom": "personalizado",
+    "analyzing": "Analizando {path}…",
+    "files_one": "{n} archivo",
+    "files_other": "{n} archivos",
+    "folders_one": "{n} carpeta",
+    "folders_other": "{n} carpetas",
+    "unreadable_one": "{n} carpeta sin acceso (ejecuta como administrador)",
+    "unreadable_other": "{n} carpetas sin acceso (ejecuta como administrador)",
+    "entries": "Carpetas y archivos",
+    "largest": "Archivos más grandes",
+    "types": "Tipos",
+    "no_ext": "sin extensión",
+    "comparing": "Comparando",
+    "groups_one": "{n} grupo",
+    "groups_other": "{n} grupos",
+    "recoverable": "{size} recuperables",
+    "files_checked_one": "{n} archivo revisado",
+    "files_checked_other": "{n} archivos revisados",
+    "info": {
+      "settings": "Ajustes",
+      "admin": "Administrador",
+      "profile": "Perfil",
+      "language": "Idioma",
+      "projects": "Proyectos",
+      "exclusions": "Exclusiones"
+    },
+    "yes": "sí",
+    "no": "no",
+    "unknown_mode": "modo desconocido '{id}'. Usa `rcl modes` para verlos.",
+    "needs_admin": "requiere admin",
+    "scan_total": "Total encontrado: {total}  ·  preseleccionado (seguro): {safe}  ·  {ms} ms",
+    "some_need_admin": "Algunos elementos requieren ejecutar como administrador.",
+    "nothing": "Nada que limpiar con esos criterios.",
+    "cleaning": "limpiando…",
+    "dry_run": "SIMULACIÓN: se liberarían {size}. Repite con --yes para limpiar.",
+    "freed": "Liberado: {size}  ·  omitidos (en uso/sin permiso): {skipped}  ·  {ms} ms"
+  }
+}

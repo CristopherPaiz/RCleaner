@@ -1,0 +1,25 @@
+[package]
+name = "crp-disk"
+description = "RCleaner: analizador de uso de disco y buscador de duplicados."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+blake3.workspace = true
+crp-core.workspace = true
+crp-platform.workspace = true
+rayon.workspace = true
+serde.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

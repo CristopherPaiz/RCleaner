@@ -6,7 +6,7 @@ use crp_core::context::default_dev_roots;
 use crp_core::settings::{append_history, load_history};
 use crp_core::{
     CleanOptions, CleanReport, Env, HistoryEntry, Mode, ModuleMeta, ProgressEvent, ScanReport,
-    Settings, modes,
+    Settings, modes, t, tf,
 };
 use serde::Serialize;
 use std::collections::HashSet;
@@ -34,6 +34,8 @@ pub struct SystemInfo {
     auto_dev_roots: Vec<PathBuf>,
     config_dir: PathBuf,
     version: &'static str,
+    /// Idioma efectivo de los textos del motor.
+    language: String,
 }
 
 #[tauri::command]
@@ -46,6 +48,7 @@ pub fn system_info(state: State<'_, AppState>) -> SystemInfo {
         dev_roots: ctx.dev_roots,
         config_dir: state.paths.config_dir.clone(),
         version: env!("CARGO_PKG_VERSION"),
+        language: crp_core::i18n::language(),
     }
 }
 
@@ -104,7 +107,7 @@ pub fn delete_mode(state: State<'_, AppState>, id: String) -> CmdResult<()> {
 
 #[tauri::command]
 pub fn list_modules(state: State<'_, AppState>) -> Vec<ModuleMeta> {
-    state.engine.metas().cloned().collect()
+    lock(&state.engine).metas().cloned().collect()
 }
 
 // ── Ajustes ────────────────────────────────────────────────────────────────
@@ -128,8 +131,17 @@ pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResul
         dev_roots: clean(settings.dev_roots),
         exclusions: clean(settings.exclusions),
         default_mode: settings.default_mode,
+        language: settings.language.filter(|l| !l.is_empty()),
+        theme: settings.theme.filter(|t| t == "light" || t == "dark"),
     };
     settings.save(&state.paths.settings_file()).map_err(err)?;
+    let language_changed = lock(&state.settings).language != settings.language;
+    if language_changed {
+        crate::state::apply_language(&settings);
+        // Los nombres de módulos y hallazgos se generan en el idioma activo.
+        *lock(&state.engine) = crp_modules::engine();
+        lock(&state.last_scan).clear();
+    }
     *lock(&state.settings) = settings;
     Ok(())
 }
@@ -155,7 +167,7 @@ pub async fn scan(
     state: State<'_, AppState>,
     selectors: Vec<String>,
 ) -> CmdResult<ScanReport> {
-    let engine = state.engine.clone();
+    let engine = lock(&state.engine).clone();
     let ctx = state.fresh_context();
     let report = tauri::async_runtime::spawn_blocking(move || {
         let sink = move |e: ProgressEvent| {
@@ -185,10 +197,10 @@ pub async fn clean(
         .cloned()
         .collect();
     if findings.len() != wanted.len() {
-        return Err("Algunos elementos ya no existen; vuelve a analizar.".into());
+        return Err(t("app.stale_scan"));
     }
 
-    let engine = state.engine.clone();
+    let engine = lock(&state.engine).clone();
     let ctx = state.fresh_context();
     let report = tauri::async_runtime::spawn_blocking(move || {
         let sink = move |e: ProgressEvent| {
@@ -214,9 +226,15 @@ pub async fn clean(
     Ok(report)
 }
 
+/// Cancela una tarea en curso: `clean` (análisis/limpieza), `disk` o `dupes`.
 #[tauri::command]
-pub fn cancel(state: State<'_, AppState>) {
-    lock(&state.cancel).cancel();
+pub fn cancel(state: State<'_, AppState>, task: Option<String>) {
+    let slot = match task.as_deref() {
+        Some("disk") => &state.disk_cancel,
+        Some("dupes") => &state.dupes_cancel,
+        _ => &state.cancel,
+    };
+    lock(slot).cancel();
 }
 
 /// Abre el Explorador con la ruta seleccionada. Sólo rutas conocidas.
@@ -228,26 +246,15 @@ pub fn reveal(state: State<'_, AppState>, path: PathBuf) -> CmdResult<()> {
         || lock(&state.settings).dev_roots.contains(&path)
         || state.paths.config_dir == path;
     if !known {
-        return Err("Ruta desconocida".into());
+        return Err(t("app.unknown_path"));
     }
-    let arg = if path.is_dir() {
-        path.into_os_string()
-    } else {
-        let mut a = std::ffi::OsString::from("/select,");
-        a.push(&path);
-        a
-    };
-    std::process::Command::new("explorer.exe")
-        .arg(arg)
-        .spawn()
-        .map_err(err)?;
-    Ok(())
+    crate::space::open_in_explorer(&path)
 }
 
 /// Relanza la app como administrador y cierra esta instancia.
 #[tauri::command]
 pub fn restart_as_admin(app: AppHandle) -> CmdResult<()> {
-    crp_platform::relaunch_elevated(&[]).map_err(|e| format!("No se pudo elevar: {e}"))?;
+    crp_platform::relaunch_elevated(&[]).map_err(|e| tf("app.elevate_failed", &[("error", &e)]))?;
     app.exit(0);
     Ok(())
 }

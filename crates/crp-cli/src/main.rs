@@ -1,28 +1,26 @@
-//! `crp` — Clean-CRP desde la terminal.
+//! `rcl` — RCleaner desde la terminal.
 //!
 //! ```text
-//! crp modes                       # lista los modos
-//! crp modules --mode programador  # módulos de un modo
-//! crp scan --mode programador     # vista previa (no borra nada)
-//! crp clean --mode rapido         # simulación: muestra qué borraría
-//! crp clean --mode rapido --yes   # limpia de verdad
+//! rcl modes                       # lista los modos
+//! rcl modules --mode programador  # módulos de un modo
+//! rcl scan --mode programador     # vista previa (no borra nada)
+//! rcl clean --mode rapido         # simulación: muestra qué borraría
+//! rcl clean --mode rapido --yes   # limpia de verdad
+//! rcl space C:\ --top 20          # qué ocupa espacio
+//! rcl dupes D:\Fotos              # archivos duplicados (no borra)
 //! ```
 
 use anyhow::{Result, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use crp_core::{
-    CleanOptions, Engine, Finding, ProgressEvent, Risk, ScanContext, ScanReport, modes,
+    CleanOptions, Engine, Finding, ProgressEvent, Risk, ScanContext, ScanReport, modes, t, tf, tn,
 };
 use humansize::{WINDOWS, format_size};
 use std::io::Write;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(
-    name = "crp",
-    version,
-    about = "Clean-CRP: limpiador modular para Windows"
-)]
+#[command(name = "rcl", version, about = "RCleaner: modular cleaner for Windows")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -30,45 +28,65 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Información del entorno (rutas, permisos, carpetas de proyectos).
+    /// Environment info (paths, permissions, project folders).
     Info,
-    /// Lista los modos disponibles.
+    /// List available modes.
     Modes,
-    /// Lista los módulos (opcionalmente sólo los de un modo).
+    /// List modules (optionally only those of a mode).
     Modules {
         #[arg(long)]
         mode: Option<String>,
     },
-    /// Escanea y muestra lo que se puede limpiar. No borra nada.
+    /// Scan and show what can be cleaned. Deletes nothing.
     Scan(ScanArgs),
-    /// Limpia. Sin `--yes` sólo simula.
+    /// Clean. Without `--yes` it is a dry run.
     Clean {
         #[command(flatten)]
         scan: ScanArgs,
-        /// Riesgo máximo a incluir (por defecto sólo lo preseleccionado: seguro).
+        /// Highest risk to include (default: only the preselected, safe items).
         #[arg(long, value_enum)]
         risk: Option<RiskArg>,
-        /// Limpiar sólo hallazgos cuyo id contenga alguno de estos textos.
+        /// Only clean findings whose id contains one of these texts.
         #[arg(long = "only", num_args = 1..)]
         only: Vec<String>,
-        /// Ejecutar de verdad (sin esto es una simulación).
+        /// Really delete (otherwise it is a dry run).
         #[arg(long, short = 'y')]
         yes: bool,
+    },
+    /// What takes up space in a drive or folder. Deletes nothing.
+    Space {
+        path: PathBuf,
+        /// How many folders/files to show.
+        #[arg(long, default_value_t = 15)]
+        top: usize,
+    },
+    /// Find duplicate files by content. Deletes nothing.
+    Dupes {
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+        /// Minimum size in KB.
+        #[arg(long, default_value_t = 1024)]
+        min_kb: u64,
+        /// Also walk AppData, node_modules, .git, Windows…
+        #[arg(long)]
+        all_dirs: bool,
+        #[arg(long)]
+        json: bool,
     },
 }
 
 #[derive(Args)]
 struct ScanArgs {
-    /// Modo a usar (ver `crp modes`). Por defecto: rapido.
+    /// Mode to use (see `rcl modes`). Default: rapido.
     #[arg(long, short)]
     mode: Option<String>,
-    /// Selectores de módulo en lugar de un modo (`dev.*`, `system.user_temp`, `!ai.*`).
+    /// Module selectors instead of a mode (`dev.*`, `system.user_temp`, `!ai.*`).
     #[arg(long = "module", num_args = 1..)]
     modules: Vec<String>,
-    /// Carpetas de proyectos para `dev.projects` (sustituye a las detectadas).
+    /// Project folders for `dev.projects` (replaces the detected ones).
     #[arg(long = "root", num_args = 1..)]
     roots: Vec<PathBuf>,
-    /// Salida JSON.
+    /// JSON output.
     #[arg(long)]
     json: bool,
 }
@@ -96,13 +114,24 @@ fn size(bytes: u64) -> String {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let settings =
+        crp_core::Settings::load(&crp_modules::app_paths().settings_file()).unwrap_or_default();
+    let lang = settings
+        .language
+        .or_else(crp_platform::locale::ui_language)
+        .unwrap_or_default();
+    crp_core::i18n::set_language(&lang);
     let engine = crp_modules::engine();
     match cli.command {
         Command::Info => info(),
         Command::Modes => {
             let (all, errors) = modes::all(&crp_modules::app_paths().modes_dir());
             for m in all {
-                let tag = if m.custom { " (personalizado)" } else { "" };
+                let tag = if m.custom {
+                    format!(" ({})", t("cli.custom"))
+                } else {
+                    String::new()
+                };
                 println!(
                     "{:<12} {}{tag}\n{:<12} {}\n",
                     m.id, m.name, "", m.description
@@ -159,26 +188,125 @@ fn main() -> Result<()> {
                 .collect();
             clean(&engine, &chosen, &ctx, !yes, args.json)
         }
+        Command::Space { path, top } => space(&path, top),
+        Command::Dupes {
+            paths,
+            min_kb,
+            all_dirs,
+            json,
+        } => dupes(paths, min_kb, all_dirs, json),
     }
+}
+
+fn space(path: &std::path::Path, top: usize) -> Result<()> {
+    use crp_disk::tree::{Kind, ScanOptions, ScanProgress, scan};
+    let opts = ScanOptions {
+        exclusions: crp_modules::user_context().exclusions,
+    };
+    eprintln!("{}", tf("cli.analyzing", &[("path", &path.display())]));
+    let tree = scan(
+        path,
+        &opts,
+        &crp_core::CancelToken::new(),
+        &ScanProgress::default(),
+    )?;
+    let s = tree.summary();
+    println!(
+        "{}  ·  {}  ·  {}  ·  {:.1} s",
+        size(s.bytes),
+        tn("cli.files", s.files, &[]),
+        tn("cli.folders", s.dirs, &[]),
+        s.elapsed_ms as f64 / 1000.0
+    );
+    if s.unreadable > 0 {
+        println!("! {}", tn("cli.unreadable", s.unreadable, &[]));
+    }
+    println!("\n{}:", t("cli.entries"));
+    for e in tree.children(s.root, top) {
+        let tag = if e.kind == Kind::Dir { "\\" } else { "" };
+        println!("  {:>10}  {}{tag}", size(e.size), e.name);
+    }
+    println!("\n{}:", t("cli.largest"));
+    for f in tree.largest_files(s.root, top) {
+        println!("  {:>10}  {}", size(f.size), f.path.display());
+    }
+    println!("\n{}:", t("cli.types"));
+    for e in s.extensions.iter().take(top) {
+        let ext = if e.ext.is_empty() {
+            format!("({})", t("cli.no_ext"))
+        } else {
+            e.ext.to_string()
+        };
+        println!(
+            "  {:>10}  {ext:<16} {}",
+            size(e.bytes),
+            tn("cli.files", e.files, &[])
+        );
+    }
+    Ok(())
+}
+
+fn dupes(paths: Vec<PathBuf>, min_kb: u64, all_dirs: bool, json: bool) -> Result<()> {
+    use crp_disk::dupes::{DupeOptions, DupeProgress, find};
+    let mut opts = DupeOptions::new(paths);
+    opts.min_size = min_kb * 1024;
+    opts.exclusions = crp_modules::user_context().exclusions;
+    if all_dirs {
+        opts.skip_dirs.clear();
+    }
+    let progress = |p: DupeProgress| {
+        if let DupeProgress::Hashing { done, total } = p {
+            eprint!("\r{} {done}/{total}", t("cli.comparing"));
+        }
+    };
+    let rep = find(&opts, &crp_core::CancelToken::new(), &progress);
+    eprintln!();
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rep)?);
+        return Ok(());
+    }
+    for g in &rep.groups {
+        println!("{} × {}", g.files.len(), size(g.size));
+        for f in &g.files {
+            println!("    {}", f.path.display());
+        }
+    }
+    println!(
+        "\n{} · {} · {} · {:.1} s",
+        tn("cli.groups", rep.groups.len() as u64, &[]),
+        tf("cli.recoverable", &[("size", &size(rep.wasted_bytes))]),
+        tn("cli.files_checked", rep.files_scanned, &[]),
+        rep.elapsed_ms as f64 / 1000.0
+    );
+    Ok(())
 }
 
 fn info() -> Result<()> {
     let ctx = crp_modules::user_context();
-    println!(
-        "Ajustes       : {}",
-        crp_modules::app_paths().config_dir.display()
+    let row = |k: &str, v: &dyn std::fmt::Display| println!("{:<14}: {v}", t(k));
+    row(
+        "cli.info.settings",
+        &crp_modules::app_paths().config_dir.display(),
     );
-    println!("Administrador : {}", if ctx.is_admin { "sí" } else { "no" });
-    println!("Perfil        : {}", ctx.env.home.display());
-    println!("LocalAppData  : {}", ctx.env.local_app_data.display());
-    println!("Temp          : {}", ctx.env.temp.display());
-    println!("Windows       : {}", ctx.env.windows_dir.display());
-    println!("Proyectos     :");
+    row(
+        "cli.info.admin",
+        &t(if ctx.is_admin { "cli.yes" } else { "cli.no" }),
+    );
+    row("cli.info.profile", &ctx.env.home.display());
+    row("cli.info.language", &crp_core::i18n::language());
+    println!(
+        "{:<14}: {}",
+        "LocalAppData",
+        ctx.env.local_app_data.display()
+    );
+    println!("{:<14}: {}", "Temp", ctx.env.temp.display());
+    println!("{:<14}: {}", "Windows", ctx.env.windows_dir.display());
+    println!("{:<14}:", t("cli.info.projects"));
     for r in &ctx.dev_roots {
         println!("  {}", r.display());
     }
     if !ctx.exclusions.is_empty() {
-        println!("Exclusiones   :");
+        println!("{:<14}:", t("cli.info.exclusions"));
         for r in &ctx.exclusions {
             println!("  {}", r.display());
         }
@@ -190,7 +318,7 @@ fn mode_selectors(id: &str) -> Result<Vec<String>> {
     let (all, _) = modes::all(&crp_modules::app_paths().modes_dir());
     match all.into_iter().find(|m| m.id == id) {
         Some(m) => Ok(m.modules),
-        None => bail!("modo desconocido '{id}'. Usa `crp modes` para verlos."),
+        None => bail!("{}", tf("cli.unknown_mode", &[("id", &id)])),
     }
 }
 
@@ -239,9 +367,9 @@ fn print_report(report: &ScanReport, ctx: &ScanContext) {
         }
         let mark = if f.selected { "[x]" } else { "[ ]" };
         let admin = if f.requires_admin && !ctx.is_admin {
-            " (requiere admin)"
+            format!(" ({})", t("cli.needs_admin"))
         } else {
-            ""
+            String::new()
         };
         println!(
             "{mark} {:>10}  {:<9} {}{admin}\n               {}",
@@ -261,13 +389,18 @@ fn print_report(report: &ScanReport, ctx: &ScanContext) {
         println!("\n! {}: {}", e.module_id, e.message);
     }
     println!(
-        "\nTotal encontrado: {}  ·  preseleccionado (seguro): {}  ·  {} ms",
-        size(report.total_bytes()),
-        size(report.selected_bytes()),
-        report.elapsed_ms
+        "\n{}",
+        tf(
+            "cli.scan_total",
+            &[
+                ("total", &size(report.total_bytes())),
+                ("safe", &size(report.selected_bytes())),
+                ("ms", &report.elapsed_ms),
+            ],
+        )
     );
     if findings.iter().any(|f| f.requires_admin) && !ctx.is_admin {
-        println!("Algunos elementos requieren ejecutar como administrador.");
+        println!("{}", t("cli.some_need_admin"));
     }
 }
 
@@ -279,12 +412,12 @@ fn clean(
     json: bool,
 ) -> Result<()> {
     if chosen.is_empty() {
-        println!("Nada que limpiar con esos criterios.");
+        println!("{}", t("cli.nothing"));
         return Ok(());
     }
     let progress = |e: ProgressEvent| {
         if let ProgressEvent::FindingCleaned { done, total, .. } = e {
-            eprint!("\r[{done}/{total}] limpiando…");
+            eprint!("\r[{done}/{total}] {}", t("cli.cleaning"));
             let _ = std::io::stderr().flush();
         }
     };
@@ -303,15 +436,20 @@ fn clean(
     }
     if dry_run {
         println!(
-            "\nSIMULACIÓN: se liberarían {}. Repite con --yes para limpiar.",
-            size(report.freed_bytes())
+            "\n{}",
+            tf("cli.dry_run", &[("size", &size(report.freed_bytes()))])
         );
     } else {
         println!(
-            "\nLiberado: {}  ·  omitidos (en uso/sin permiso): {}  ·  {} ms",
-            size(report.freed_bytes()),
-            report.skipped_items(),
-            report.elapsed_ms
+            "\n{}",
+            tf(
+                "cli.freed",
+                &[
+                    ("size", &size(report.freed_bytes())),
+                    ("skipped", &report.skipped_items()),
+                    ("ms", &report.elapsed_ms),
+                ],
+            )
         );
     }
     Ok(())

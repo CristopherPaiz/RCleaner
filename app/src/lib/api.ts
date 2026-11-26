@@ -74,12 +74,18 @@ export interface SystemInfo {
   auto_dev_roots: string[];
   config_dir: string;
   version: string;
+  /** Idioma efectivo del backend. */
+  language: string;
 }
 
 export interface Settings {
   dev_roots: string[];
   exclusions: string[];
   default_mode: string | null;
+  /** `null` = idioma del sistema. */
+  language: string | null;
+  /** `null` = tema del sistema. */
+  theme: "light" | "dark" | null;
 }
 
 export interface Drive {
@@ -104,6 +110,97 @@ export type ProgressEvent =
   | { type: "clean_started"; total: number }
   | { type: "finding_cleaned"; finding_id: string; done: number; total: number; freed_bytes: number };
 
+// ── Espacio (analizador) ──────────────────────────────────────────────────
+
+export type NodeKind = "dir" | "file" | "link";
+
+export interface DiskSummary {
+  root: number;
+  path: string;
+  bytes: number;
+  files: number;
+  dirs: number;
+  unreadable: number;
+  cloud_files: number;
+  elapsed_ms: number;
+  extensions: { ext: string; bytes: number; files: number }[];
+}
+
+export interface ViewNode {
+  id: number | null;
+  name: string;
+  size: number;
+  items: number;
+  kind: NodeKind | "rest";
+  children: ViewNode[];
+}
+
+export interface DiskEntry {
+  id: number;
+  name: string;
+  size: number;
+  items: number;
+  kind: NodeKind;
+  modified: number;
+  /** Por qué no se puede eliminar (archivo de Windows, carpeta base…). */
+  protected: string | null;
+}
+
+export interface DiskFile {
+  id: number;
+  name: string;
+  path: string;
+  size: number;
+  modified: number;
+  protected: string | null;
+}
+
+export interface Crumb {
+  id: number;
+  name: string;
+}
+
+export interface DiskProgress {
+  files: number;
+  dirs: number;
+  bytes: number;
+  current: string;
+}
+
+export interface DeleteResult {
+  freed_bytes: number;
+  removed: number;
+  errors: string[];
+}
+
+// ── Duplicados ────────────────────────────────────────────────────────────
+
+export interface DupeFile {
+  id: number;
+  path: string;
+  modified: number;
+}
+
+export interface DupeGroup {
+  size: number;
+  files: DupeFile[];
+}
+
+export interface DupeReport {
+  groups: DupeGroup[];
+  files_scanned: number;
+  wasted_bytes: number;
+  unreadable: number;
+  cloud_skipped: number;
+  elapsed_ms: number;
+}
+
+export type DupeProgress =
+  | { phase: "listing"; files: number }
+  | { phase: "hashing"; done: number; total: number };
+
+export type Task = "clean" | "disk" | "dupes";
+
 export const api = {
   systemInfo: () => invoke<SystemInfo>("system_info"),
   drives: () => invoke<Drive[]>("drives"),
@@ -122,9 +219,28 @@ export const api = {
   /** El backend sólo acepta ids del último escaneo: la UI nunca envía rutas. */
   clean: (findingIds: string[], dryRun: boolean, modeName: string | null) =>
     invoke<CleanReport>("clean", { findingIds, dryRun, modeName }),
-  cancel: () => invoke<void>("cancel"),
+  cancel: (task: Task = "clean") => invoke<void>("cancel", { task }),
   reveal: (path: string) => invoke<void>("reveal", { path }),
   restartAsAdmin: () => invoke<void>("restart_as_admin"),
+
+  diskScan: (path: string) => invoke<DiskSummary>("disk_scan", { path }),
+  diskSummary: () => invoke<DiskSummary | null>("disk_summary"),
+  diskView: (id: number, depth: number) => invoke<ViewNode | null>("disk_view", { id, depth }),
+  diskChildren: (id: number) => invoke<DiskEntry[]>("disk_children", { id }),
+  diskCrumbs: (id: number) => invoke<Crumb[]>("disk_crumbs", { id }),
+  diskLargest: (id: number) => invoke<DiskFile[]>("disk_largest", { id }),
+  diskReveal: (id: number) => invoke<void>("disk_reveal", { id }),
+  diskDelete: (ids: number[]) => invoke<DeleteResult>("disk_delete", { ids }),
+  onDiskProgress: (cb: (p: DiskProgress) => void): Promise<UnlistenFn> =>
+    listen<DiskProgress>("crp://disk", (e) => cb(e.payload)),
+
+  dupesScan: (roots: string[], minSize: number, includeSystem: boolean) =>
+    invoke<DupeReport>("dupes_scan", { roots, minSize, includeSystem }),
+  dupesReport: () => invoke<DupeReport | null>("dupes_report"),
+  dupesReveal: (id: number) => invoke<void>("dupes_reveal", { id }),
+  dupesDelete: (ids: number[]) => invoke<DeleteResult>("dupes_delete", { ids }),
+  onDupesProgress: (cb: (p: DupeProgress) => void): Promise<UnlistenFn> =>
+    listen<DupeProgress>("crp://dupes", (e) => cb(e.payload)),
 
   onProgress: (cb: (e: ProgressEvent) => void): Promise<UnlistenFn> =>
     listen<ProgressEvent>("crp://progress", (e) => cb(e.payload)),

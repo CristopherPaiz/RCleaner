@@ -1,72 +1,75 @@
-# Catálogo de limpiadores
+# Cleaner catalog
 
-Riesgo: 🟢 Seguro (preseleccionado) · 🟡 Moderado · 🔴 Avanzado. 🛡 = requiere admin.
+English · [Español](MODULES.es.md)
 
-## Sistema (`system.*`)
+Risk: 🟢 Safe (preselected) · 🟡 Moderate · 🔴 Advanced. 🛡 = needs admin.
 
-| id | Qué borra | Riesgo |
+## System (`system.*`)
+
+| id | What it deletes | Risk |
 |---|---|---|
-| `system.user_temp` | `%TEMP%` con más de 24 h | 🟢 |
-| `system.windows_temp` | `C:\Windows\Temp` con más de 24 h | 🟢 🛡 |
+| `system.user_temp` | `%TEMP%` older than 24 h | 🟢 |
+| `system.windows_temp` | `C:\Windows\Temp` older than 24 h | 🟢 🛡 |
 | `system.thumbnails` | `%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache_*.db` | 🟢 |
-| `system.wer` | `WER\ReportArchive`, `ReportQueue`, `Temp` (usuario y 🛡 sistema) | 🟢 |
+| `system.wer` | `WER\ReportArchive`, `ReportQueue`, `Temp` (user and 🛡 system) | 🟢 |
 | `system.crash_dumps` | `%LOCALAPPDATA%\CrashDumps`; 🛡 `Minidump`, `LiveKernelReports`, `MEMORY.DMP` | 🟢 |
-| `system.windows_logs` | `C:\Windows\Logs` con más de 7 días | 🟡 🛡 |
+| `system.windows_logs` | `C:\Windows\Logs` older than 7 days | 🟡 🛡 |
 | `system.shader_cache` | `D3DSCache`, NVIDIA `DXCache`/`GLCache`, AMD `DxCache`/`DxcCache`/`VkCache`, Intel; Steam `shadercache` (🟡) | 🟢 |
-| `system.delivery_optimization` | Caché P2P de Windows Update | 🟡 🛡 |
+| `system.delivery_optimization` | Windows Update P2P cache | 🟡 🛡 |
 | `system.windows_update` | `SoftwareDistribution\Download` | 🟡 🛡 |
-| `system.recycle_bin` | Papelera de todas las unidades (Win32) | 🟡 |
+| `system.recycle_bin` | Recycle Bin on every drive (Win32) | 🟡 |
 
-**No incluido a propósito:** Prefetch (empeora arranque), `iconcache` (iconos rotos hasta reiniciar).
+**Left out on purpose:** Prefetch (slows down startup), `iconcache` (broken
+icons until a restart).
 
-## Navegadores (`browser.*`) — sólo caché
+## Browsers (`browser.*`) — cache only
 
 Chrome, Edge, Brave, Vivaldi, Chromium, Opera, Opera GX, Firefox.
 
-| Qué | Riesgo |
+| What | Risk |
 |---|---|
-| `Cache`, `Code Cache`, `GPUCache`, `Dawn*Cache`, `ShaderCache`, `GrShaderCache` de todos los perfiles | 🟢 |
-| `Service Worker\CacheStorage`/`ScriptCache` (datos offline/PWA) | 🟡 |
+| `Cache`, `Code Cache`, `GPUCache`, `Dawn*Cache`, `ShaderCache`, `GrShaderCache` in every profile | 🟢 |
+| `Service Worker\CacheStorage`/`ScriptCache` (offline/PWA data) | 🟡 |
 | Firefox: `cache2`, `startupCache`, `thumbnails`, `jumpListCache` | 🟢 |
 
-Cookies, historial, contraseñas y sesiones **no** se tocan.
+Cookies, history, passwords and sessions are **never** touched.
 
-## Desarrollo (`dev.*`)
+## Development (`dev.*`)
 
-| id | Ruta (o variable que la sobrescribe) | Riesgo |
+| id | Path (or variable that overrides it) | Risk |
 |---|---|---|
 | `dev.pip` | `PIP_CACHE_DIR` · `%LOCALAPPDATA%\pip\Cache` | 🟢 |
 | `dev.uv` | `UV_CACHE_DIR` · `%LOCALAPPDATA%\uv\cache` | 🟢 |
 | `dev.poetry` | `POETRY_CACHE_DIR` · `%LOCALAPPDATA%\pypoetry\Cache` | 🟢 |
-| `dev.conda` | `*.conda`/`*.tar.bz2` en `pkgs` (anaconda3, miniconda3, miniforge3…) | 🟢 |
+| `dev.conda` | `*.conda`/`*.tar.bz2` in `pkgs` (anaconda3, miniconda3, miniforge3…) | 🟢 |
 | `dev.npm` | `NPM_CONFIG_CACHE` · `%LOCALAPPDATA%\npm-cache` | 🟢 |
 | `dev.pnpm` | `%LOCALAPPDATA%\pnpm\store` | 🟡 |
 | `dev.yarn` | `YARN_CACHE_FOLDER` · `%LOCALAPPDATA%\Yarn\Cache`, `~\.yarn\berry\cache` | 🟢 |
 | `dev.bun` | `BUN_INSTALL_CACHE_DIR` · `~\.bun\install\cache` | 🟢 |
 | `dev.cargo` | `CARGO_HOME\registry\{cache,src}`, `git\checkouts` | 🟡 |
 | `dev.go` | `GOCACHE` (🟢), `GOMODCACHE` (🟡) | 🟢/🟡 |
-| `dev.gradle` | `GRADLE_USER_HOME\caches`, `wrapper\dists` (🟡), logs del daemon (🟢) | 🟡 |
+| `dev.gradle` | `GRADLE_USER_HOME\caches`, `wrapper\dists` (🟡), daemon logs (🟢) | 🟡 |
 | `dev.maven` | `~\.m2\repository` | 🟡 |
 | `dev.nuget` | `NuGet\v3-cache` (🟢), `NUGET_PACKAGES` (🟡) | 🟢/🟡 |
 | `dev.editors` | VS Code / Cursor / VSCodium / Windsurf: `Cache`, `CachedData`, `CachedExtensionVSIXs`, `logs`… | 🟢 |
-| `dev.jetbrains` | `%LOCALAPPDATA%\JetBrains\*\caches` y `log` | 🟡 |
-| `dev.projects` | En tus carpetas de proyectos: `__pycache__`/`.pytest_cache`/`.mypy_cache`/`.ruff_cache` (🟢, agrupados), `node_modules` (con `package.json`), `target` (con `Cargo.toml`), `.next`/`.nuxt`/`.svelte-kit`/`.turbo`/`.parcel-cache`/`.angular`, `.gradle` (🟡), `.venv`/`venv` con `pyvenv.cfg` (🔴). Muestra días sin cambios. | 🟡 |
+| `dev.jetbrains` | `%LOCALAPPDATA%\JetBrains\*\caches` and `log` | 🟡 |
+| `dev.projects` | In your project folders: `__pycache__`/`.pytest_cache`/`.mypy_cache`/`.ruff_cache` (🟢, grouped), `node_modules` (with `package.json`), `target` (with `Cargo.toml`), `.next`/`.nuxt`/`.svelte-kit`/`.turbo`/`.parcel-cache`/`.angular`, `.gradle` (🟡), `.venv`/`venv` with `pyvenv.cfg` (🔴). Shows days since the last change. | 🟡 |
 
-Carpetas de proyectos por defecto (si existen): `~\Documents`, `~\source`,
+Default project folders (if they exist): `~\Documents`, `~\source`,
 `~\repos`, `~\projects`, `~\dev`, `~\code`, `~\src`, `~\workspace`, `~\Github`,
-`~\git`, `~\Desktop`. CLI: `--root C:\ruta`.
+`~\git`, `~\Desktop`. CLI: `--root C:\path`.
 
-## IA (`ai.*`)
+## AI (`ai.*`)
 
-| id | Qué | Riesgo |
+| id | What | Risk |
 |---|---|---|
-| `ai.ollama` | Un hallazgo por modelo (`OLLAMA_MODELS` · `~\.ollama\models`). Borra manifiesto + capas no compartidas; no necesita el servidor. Tamaño = espacio que realmente se libera. | 🔴 |
-| `ai.huggingface` | Un hallazgo por repo de `HF_HUB_CACHE`/`HF_HOME\hub` · `~\.cache\huggingface\hub` (modelos, datasets, spaces) con días desde la descarga | 🔴 |
-| `ai.lmstudio` | Un hallazgo por modelo en `~\.lmstudio\models` y `~\.cache\lm-studio\models` | 🔴 |
+| `ai.ollama` | One finding per model (`OLLAMA_MODELS` · `~\.ollama\models`). Deletes the manifest + layers no other model uses; the server doesn't need to run. Size = space actually freed. | 🔴 |
+| `ai.huggingface` | One finding per repo in `HF_HUB_CACHE`/`HF_HOME\hub` · `~\.cache\huggingface\hub` (models, datasets, spaces) with days since download | 🔴 |
+| `ai.lmstudio` | One finding per model in `~\.lmstudio\models` and `~\.cache\lm-studio\models` | 🔴 |
 | `ai.misc` | `TORCH_HOME\hub` (🟡), `~\.cache\whisper` (🔴), `~\.keras\models` (🟡) | 🟡 |
 
-## Próximos (ver ROADMAP)
+## Coming next (see [ROADMAP](ROADMAP.md))
 
-Docker/WSL (`wsl --unregister`, compactar VHDX), paquetes globales npm/pip sin
-uso, desinstalador, registro, analizador de disco, duplicados, Windows.old,
-`DISM /StartComponentCleanup`, privacidad de navegadores (opt-in).
+Docker/WSL (`wsl --unregister`, compact VHDX), unused global npm/pip packages,
+uninstaller, registry, disk analyzer, duplicates, Windows.old,
+`DISM /StartComponentCleanup`, browser privacy (opt-in).

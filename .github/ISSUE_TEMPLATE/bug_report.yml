@@ -1,0 +1,47 @@
+name: Bug report / Reportar un error
+description: Something doesn't work as expected. / Algo no funciona como debería.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Security problems go through SECURITY.md, not here.
+        ¡Gracias por reportar! Los problemas de seguridad van por SECURITY.md, no aquí.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / ¿Qué pasó?
+      description: What you did, what you expected and what happened instead. / Qué hiciste, qué esperabas y qué pasó.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Pasos para reproducirlo
+      placeholder: |
+        1. Open Cleanup / Abre Limpieza
+        2. Choose the Developer mode / Elige el modo Programador
+        3. …
+  - type: input
+    id: version
+    attributes:
+      label: RCleaner version / Versión de RCleaner
+      description: Settings → About / Ajustes → Acerca de
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version / Versión de Windows
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / Sección
+      options: [Overview / Resumen, Cleanup / Limpieza, Space / Espacio, Duplicates / Duplicados, Settings / Ajustes, CLI, Installer / Instalador, Other / Otra]
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or logs / Capturas o registros

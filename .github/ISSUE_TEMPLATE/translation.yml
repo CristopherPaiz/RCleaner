@@ -1,0 +1,28 @@
+name: Translation / Traducción
+description: Add a language or fix a translation. / Añadir un idioma o corregir una traducción.
+labels: [i18n]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read docs/TRANSLATING.md first. You can also open a pull request directly.
+        Lee primero docs/TRANSLATING.es.md. También puedes abrir un pull request directamente.
+  - type: input
+    id: lang
+    attributes:
+      label: Language / Idioma
+      placeholder: "Français (fr)"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type / Tipo
+      options: [New language / Idioma nuevo, Fix a translation / Corregir una traducción, Missing text / Falta un texto]
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details / Detalles
+      description: Which text, where it appears and the suggested wording. / Qué texto, dónde aparece y la redacción que propones.

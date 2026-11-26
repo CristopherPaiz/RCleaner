@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Clean-CRP",
-  "identifier": "com.cleancrp.app",
+  "productName": "RCleaner",
+  "identifier": "com.rcleaner.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,11 +12,14 @@
     "windows": [
       {
         "label": "main",
-        "title": "Clean-CRP",
-        "width": 1180,
-        "height": 760,
-        "minWidth": 900,
-        "minHeight": 560,
+        "title": "RCleaner",
+        "width": 1240,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 620,
+        "backgroundColor": "#0b0c10",
+        "decorations": false,
+        "shadow": true,
         "center": true
       }
     ],
@@ -29,7 +32,7 @@
     "targets": ["msi", "nsis"],
     "category": "Utility",
     "shortDescription": "Limpiador y mantenimiento modular para Windows",
-    "longDescription": "Clean-CRP limpia temporales, cachés de navegadores, cachés de desarrollo y modelos de IA con modos por perfil.",
+    "longDescription": "RCleaner limpia temporales, cachés de navegadores, cachés de desarrollo y modelos de IA con modos por perfil.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

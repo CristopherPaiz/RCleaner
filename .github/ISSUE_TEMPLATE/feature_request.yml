@@ -1,0 +1,25 @@
+name: Feature or cleaner request / Proponer una función o limpiador
+description: An idea for RCleaner. / Una idea para RCleaner.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like? / ¿Qué te gustaría?
+      description: The problem it solves matters more than the exact solution. / Importa más el problema que resuelve que la solución exacta.
+    validations:
+      required: true
+  - type: textarea
+    id: cleaner
+    attributes:
+      label: For a new cleaner / Para un limpiador nuevo
+      description: |
+        Which folders or files it would clean, which program creates them and how they are rebuilt after deleting them.
+        Qué carpetas o archivos limpiaría, qué programa los crea y cómo se regeneran después de borrarlos.
+      placeholder: "%LOCALAPPDATA%\Unity\cache – Unity downloads it again when needed"
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing / Colaborar
+      options:
+        - label: I'd like to implement it myself. / Me gustaría implementarlo yo.

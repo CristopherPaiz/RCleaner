@@ -108,7 +108,7 @@ pub fn which(env: &Env, program: &str) -> Option<PathBuf> {
 pub fn run_command(env: &Env, program: &str, args: &[String]) -> Result<()> {
     let exe = which(env, program).ok_or_else(|| Error::Command {
         program: program.to_owned(),
-        message: "no se encontró en PATH".into(),
+        message: crate::i18n::t("error.not_in_path"),
     })?;
     let mut cmd = Command::new(&exe);
     cmd.args(args);

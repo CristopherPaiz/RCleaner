@@ -7,6 +7,7 @@
 //! - `!dev.projects`    → excluye (se aplica después de las inclusiones).
 
 use crate::error::{Error, Result};
+use crate::i18n::{self, t, tf};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -32,8 +33,19 @@ struct ModesFile {
 const BUILTIN: &str = include_str!("../modes/builtin.toml");
 
 /// Modos incluidos en el binario.
+/// Modos incluidos en el binario, con nombre y descripción en el idioma actual
+/// (`mode.<id>.name` / `mode.<id>.desc` en `locales/`; si no, lo del TOML).
 pub fn builtin() -> Vec<Mode> {
-    parse(BUILTIN).expect("modes/builtin.toml debe ser válido")
+    let mut modes = parse(BUILTIN).expect("modes/builtin.toml debe ser válido");
+    for m in &mut modes {
+        if let Some(n) = i18n::get(&format!("mode.{}.name", m.id)) {
+            m.name = n;
+        }
+        if let Some(d) = i18n::get(&format!("mode.{}.desc", m.id)) {
+            m.description = d;
+        }
+    }
+    modes
 }
 
 /// Interpreta un archivo TOML con uno o más `[[mode]]`.
@@ -86,7 +98,7 @@ pub fn all(user_dir: &Path) -> (Vec<Mode>, Vec<String>) {
     let (user, mut errors) = load_dir(user_dir);
     for mut m in user {
         if modes.iter().any(|b| b.id == m.id) {
-            errors.push(format!("el modo '{}' ya existe; cambia su id", m.id));
+            errors.push(tf("core.mode_exists", &[("id", &m.id)]));
             continue;
         }
         m.custom = true;
@@ -98,17 +110,13 @@ pub fn all(user_dir: &Path) -> (Vec<Mode>, Vec<String>) {
 /// Guarda (o reemplaza) un modo de usuario en `user_dir\<id>.toml`.
 pub fn save_user(user_dir: &Path, mode: &Mode) -> Result<std::path::PathBuf> {
     if !valid_id(&mode.id) {
-        return Err(Error::Config(
-            "id inválido: usa minúsculas, números, '-' o '_'".into(),
-        ));
+        return Err(Error::Config(t("core.mode_bad_id")));
     }
     if builtin().iter().any(|b| b.id == mode.id) {
-        return Err(Error::Config(format!("'{}' es un modo incluido", mode.id)));
+        return Err(Error::Config(tf("core.mode_builtin", &[("id", &mode.id)])));
     }
     if mode.name.trim().is_empty() || mode.modules.is_empty() {
-        return Err(Error::Config(
-            "el modo necesita nombre y al menos un módulo".into(),
-        ));
+        return Err(Error::Config(t("core.mode_incomplete")));
     }
     let file = ModesFile {
         modes: vec![Mode {
@@ -126,7 +134,7 @@ pub fn save_user(user_dir: &Path, mode: &Mode) -> Result<std::path::PathBuf> {
 /// Borra un modo de usuario.
 pub fn delete_user(user_dir: &Path, id: &str) -> Result<()> {
     if !valid_id(id) {
-        return Err(Error::Config("id inválido".into()));
+        return Err(Error::Config(t("core.mode_bad_id")));
     }
     let path = user_dir.join(format!("{id}.toml"));
     std::fs::remove_file(&path).map_err(|e| Error::io(&path, e))

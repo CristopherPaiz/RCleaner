@@ -16,15 +16,19 @@ pub enum Category {
 }
 
 impl Category {
-    pub fn label(self) -> &'static str {
+    pub fn key(self) -> &'static str {
         match self {
-            Self::System => "Sistema",
-            Self::Browser => "Navegadores",
-            Self::Dev => "Desarrollo",
-            Self::Ai => "Modelos de IA",
-            Self::Apps => "Aplicaciones",
-            Self::Registry => "Registro",
+            Self::System => "system",
+            Self::Browser => "browser",
+            Self::Dev => "dev",
+            Self::Ai => "ai",
+            Self::Apps => "apps",
+            Self::Registry => "registry",
         }
+    }
+
+    pub fn label(self) -> String {
+        crate::i18n::t(&format!("category.{}", self.key()))
     }
 }
 
@@ -41,12 +45,16 @@ pub enum Risk {
 }
 
 impl Risk {
-    pub fn label(self) -> &'static str {
+    pub fn key(self) -> &'static str {
         match self {
-            Self::Safe => "Seguro",
-            Self::Moderate => "Moderado",
-            Self::Advanced => "Avanzado",
+            Self::Safe => "safe",
+            Self::Moderate => "moderate",
+            Self::Advanced => "advanced",
         }
+    }
+
+    pub fn label(self) -> String {
+        crate::i18n::t(&format!("risk.{}", self.key()))
     }
 }
 

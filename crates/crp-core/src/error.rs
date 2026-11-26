@@ -1,34 +1,35 @@
+use crate::i18n::{t, tf};
 use std::path::PathBuf;
 
 /// Errores del motor.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("E/S en {path}: {source}")]
+    #[error("{}", tf("error.io", &[("path", &path.display()), ("error", source)]))]
     Io {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("ruta protegida, no se puede limpiar: {0}")]
+    #[error("{}", tf("error.protected", &[("path", &.0.display())]))]
     Protected(PathBuf),
 
-    #[error("se requieren permisos de administrador")]
+    #[error("{}", t("error.requires_admin"))]
     RequiresAdmin,
 
-    #[error("operación cancelada")]
+    #[error("{}", t("error.cancelled"))]
     Cancelled,
 
-    #[error("el módulo '{0}' no implementa limpieza personalizada")]
+    #[error("{}", tf("error.unsupported", &[("id", .0)]))]
     Unsupported(String),
 
-    #[error("módulo desconocido: {0}")]
+    #[error("{}", tf("error.unknown_module", &[("id", .0)]))]
     UnknownModule(String),
 
-    #[error("el comando '{program}' falló: {message}")]
+    #[error("{}", tf("error.command", &[("program", program), ("error", message)]))]
     Command { program: String, message: String },
 
-    #[error("configuración inválida: {0}")]
+    #[error("{}", tf("error.config", &[("error", .0)]))]
     Config(String),
 
     #[error("{0}")]

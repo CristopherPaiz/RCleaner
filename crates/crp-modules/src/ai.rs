@@ -6,7 +6,7 @@
 use crp_core::rules::glob_under;
 use crp_core::{
     Action, Category, CleanOutcome, CleanerModule, Error, Finding, ModuleMeta, PathRuleModule,
-    Result, Risk, ScanContext, Target,
+    Result, Risk, ScanContext, Target, t, tf,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -17,22 +17,18 @@ use walkdir::WalkDir;
 
 pub fn register(e: &mut crp_core::Engine) {
     e.register(Ollama {
-        meta: ModuleMeta::new("ai.ollama", "Modelos de Ollama", Category::Ai)
-            .describe("Cada modelo descargado con `ollama pull`. Al borrar se conservan las capas compartidas con otros modelos.")
+        meta: ModuleMeta::new("ai.ollama", Category::Ai)
             .risk(Risk::Advanced)
             .closes(&["ollama.exe", "ollama app.exe"]),
     });
 
     e.register(PathRuleModule::new(
-        ModuleMeta::new("ai.huggingface", "Hugging Face", Category::Ai)
-            .describe("Modelos y datasets del hub de Hugging Face (transformers, diffusers, hf download…), uno por uno.")
-            .risk(Risk::Advanced),
+        ModuleMeta::new("ai.huggingface", Category::Ai).risk(Risk::Advanced),
         huggingface_targets,
     ));
 
     e.register(PathRuleModule::new(
-        ModuleMeta::new("ai.lmstudio", "Modelos de LM Studio", Category::Ai)
-            .describe("Modelos GGUF/MLX descargados en LM Studio, uno por uno.")
+        ModuleMeta::new("ai.lmstudio", Category::Ai)
             .risk(Risk::Advanced)
             .closes(&["lm studio.exe"]),
         |ctx| {
@@ -49,7 +45,8 @@ pub fn register(e: &mut crp_core::Engine) {
                         .to_string_lossy()
                         .replace('\\', "/");
                     targets.push(
-                        Target::paths(&rel, &rel, [model.clone()])
+                        Target::paths(&rel, [model.clone()])
+                            .label(rel.clone())
                             .detail(model.display().to_string())
                             .age_days(age_days(&model)),
                     );
@@ -60,9 +57,7 @@ pub fn register(e: &mut crp_core::Engine) {
     ));
 
     e.register(PathRuleModule::new(
-        ModuleMeta::new("ai.misc", "Otros cachés de IA", Category::Ai)
-            .describe("Checkpoints de Torch Hub, modelos de Whisper y de Keras.")
-            .risk(Risk::Moderate),
+        ModuleMeta::new("ai.misc", Category::Ai).risk(Risk::Moderate),
         |ctx| {
             let h = &ctx.env.home;
             let torch = ctx
@@ -70,10 +65,9 @@ pub fn register(e: &mut crp_core::Engine) {
                 .var_path("TORCH_HOME")
                 .unwrap_or_else(|| h.join(r".cache\torch"));
             vec![
-                Target::contents("torch", "Torch Hub", [torch.join("hub")]),
-                Target::contents("whisper", "Modelos de Whisper", [h.join(r".cache\whisper")])
-                    .risk(Risk::Advanced),
-                Target::contents("keras", "Modelos de Keras", [h.join(r".keras\models")]),
+                Target::contents("torch", [torch.join("hub")]),
+                Target::contents("whisper", [h.join(r".cache\whisper")]).risk(Risk::Advanced),
+                Target::contents("keras", [h.join(r".keras\models")]),
             ]
         },
     ));
@@ -117,16 +111,17 @@ fn huggingface_targets(ctx: &ScanContext) -> Vec<Target> {
         // models--org--name  /  datasets--org--name  /  spaces--org--name
         let mut parts = name.split("--");
         let kind = match parts.next() {
-            Some("models") => "Modelo",
-            Some("datasets") => "Dataset",
-            Some("spaces") => "Space",
+            Some("models") => t("module.ai.huggingface.kind.model"),
+            Some("datasets") => t("module.ai.huggingface.kind.dataset"),
+            Some("spaces") => t("module.ai.huggingface.kind.space"),
             _ => continue,
         };
         let repo = parts.collect::<Vec<_>>().join("/");
         let label = format!("{repo} ({kind})");
         let path = entry.path();
         targets.push(
-            Target::paths(&name, &label, [path.clone()])
+            Target::paths(&name, [path.clone()])
+                .label(label)
                 .detail(path.display().to_string())
                 .age_days(age_days(&path)),
         );
@@ -241,12 +236,10 @@ impl CleanerModule for Ollama {
                 .map(|b| b.size)
                 .sum();
             let shared = total - unique;
-            let mut detail = format!("Tamaño total {}", human(total));
+            let mut detail = tf("module.ai.ollama.total", &[("size", &human(total))]);
             if shared > 0 {
-                detail.push_str(&format!(
-                    " · {} compartido con otros modelos",
-                    human(shared)
-                ));
+                detail.push_str(" · ");
+                detail.push_str(&tf("module.ai.ollama.shared", &[("size", &human(shared))]));
             }
             findings.push(Finding {
                 id: format!("{}:{name}", self.meta.id),
@@ -283,7 +276,10 @@ impl CleanerModule for Ollama {
             return Err(Error::Protected(manifest_path));
         }
         let manifest = Manifest::read(&manifest_path).ok_or_else(|| {
-            Error::Other(format!("manifiesto ilegible: {}", manifest_path.display()))
+            Error::Other(tf(
+                "module.ai.ollama.bad_manifest",
+                &[("path", &manifest_path.display())],
+            ))
         })?;
 
         let others = Self::manifests(&models);
@@ -414,7 +410,10 @@ mod tests {
         let ctx = ScanContext::new(env, false);
         let t = huggingface_targets(&ctx);
         assert_eq!(t.len(), 1);
-        assert_eq!(t[0].label, "meta-llama/Llama-3.2-1B (Modelo)");
+        assert_eq!(
+            t[0].label.as_deref(),
+            Some("meta-llama/Llama-3.2-1B (Model)")
+        );
     }
 
     #[test]

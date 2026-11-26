@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod space;
 mod state;
 
 fn main() {
@@ -24,7 +25,19 @@ fn main() {
             commands::cancel,
             commands::reveal,
             commands::restart_as_admin,
+            space::disk_scan,
+            space::disk_summary,
+            space::disk_view,
+            space::disk_children,
+            space::disk_crumbs,
+            space::disk_largest,
+            space::disk_reveal,
+            space::disk_delete,
+            space::dupes_scan,
+            space::dupes_report,
+            space::dupes_reveal,
+            space::dupes_delete,
         ])
         .run(tauri::generate_context!())
-        .expect("error al iniciar Clean-CRP");
+        .expect("error al iniciar RCleaner");
 }

@@ -80,7 +80,7 @@ impl Engine {
                     // Un módulo con un bug no debe tumbar todo el escaneo.
                     match catch_unwind(AssertUnwindSafe(|| m.scan(ctx))) {
                         Ok(r) => r.map_err(|e| e.to_string()),
-                        Err(_) => Err("el módulo falló inesperadamente (panic)".to_owned()),
+                        Err(_) => Err(crate::i18n::t("core.module_panic")),
                     }
                 };
                 let result = result.map(|mut findings| {
@@ -168,10 +168,9 @@ fn warn_if_running(meta: &ModuleMeta, ctx: &ScanContext, findings: &mut [Finding
     if open.is_empty() {
         return;
     }
-    let msg = format!(
-        "{} está abierto ({}): ciérralo para liberar todo; los archivos en uso se omitirán.",
-        meta.name,
-        open.join(", ")
+    let msg = crate::i18n::tf(
+        "core.app_running",
+        &[("name", &meta.name), ("exe", &open.join(", "))],
     );
     for f in findings.iter_mut().filter(|f| f.warning.is_none()) {
         f.warning = Some(msg.clone());
@@ -196,11 +195,10 @@ mod tests {
 
         let mut engine = Engine::new();
         engine.register(PathRuleModule::new(
-            ModuleMeta::new("test.demo", "Demo", Category::System),
+            ModuleMeta::new("test.demo", Category::System),
             move |ctx| {
                 vec![Target::contents(
                     "c",
-                    "Demo",
                     [ctx.env.local_app_data.join(r"demo\Cache")],
                 )]
             },
@@ -238,14 +236,8 @@ mod tests {
 
         let mut engine = Engine::new();
         engine.register(PathRuleModule::new(
-            ModuleMeta::new("test.b", "Navegador", Category::Browser).closes(&["Nav.exe"]),
-            |ctx| {
-                vec![Target::contents(
-                    "c",
-                    "C",
-                    [ctx.env.local_app_data.join("b")],
-                )]
-            },
+            ModuleMeta::new("test.b", Category::Browser).closes(&["Nav.exe"]),
+            |ctx| vec![Target::contents("c", [ctx.env.local_app_data.join("b")])],
         ));
         let mut ctx = ScanContext::new(env, false)
             .with_running(["nav.exe".to_string()].into_iter().collect());
@@ -277,14 +269,8 @@ mod tests {
 
         let mut engine = Engine::new();
         engine.register(PathRuleModule::new(
-            ModuleMeta::new("test.win", "Win", Category::System).admin(),
-            |ctx| {
-                vec![Target::contents(
-                    "t",
-                    "T",
-                    [ctx.env.windows_dir.join("Temp")],
-                )]
-            },
+            ModuleMeta::new("test.win", Category::System).admin(),
+            |ctx| vec![Target::contents("t", [ctx.env.windows_dir.join("Temp")])],
         ));
         let ctx = ScanContext::new(env, false);
         let report = engine.scan(&["*".into()], &ctx, &NoProgress);

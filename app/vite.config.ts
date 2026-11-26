@@ -9,6 +9,8 @@ export default defineConfig({
     port: 1420,
     strictPort: true,
     watch: { ignored: ["**/src-tauri/**"] },
+    // Las traducciones viven en ../locales (compartidas con el backend).
+    fs: { allow: [".", "../locales"] },
   },
   build: {
     target: "es2022",

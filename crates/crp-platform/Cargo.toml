@@ -1,6 +1,6 @@
 [package]
 name = "crp-platform"
-description = "Integración Win32 de Clean-CRP: elevación, papelera y (luego) registro y restauración."
+description = "Integración Win32 de RCleaner: elevación, papelera y (luego) registro y restauración."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

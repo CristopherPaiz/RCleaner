@@ -1,95 +1,98 @@
-# Levantar el proyecto y generar builds
+# Running the project and building
 
-## 1. Requisitos
+English · [Español](BUILD.es.md)
 
-| Herramienta | Versión | Instalar |
+## 1. Requirements
+
+| Tool | Version | Install |
 |---|---|---|
-| Rust (toolchain MSVC) | stable ≥ 1.85 | `winget install Rustlang.Rustup` y luego `rustup default stable-msvc` |
-| Build Tools de Visual Studio | 2022+ con "Desarrollo para el escritorio con C++" | `winget install Microsoft.VisualStudio.2022.BuildTools` |
-| Node.js | 20 LTS o superior | `winget install OpenJS.NodeJS.LTS` |
+| Rust (MSVC toolchain) | stable ≥ 1.85 | `winget install Rustlang.Rustup`, then `rustup default stable-msvc` |
+| Visual Studio Build Tools | 2022+ with "Desktop development with C++" | `winget install Microsoft.VisualStudio.2022.BuildTools` |
+| Node.js | 20 LTS or newer | `winget install OpenJS.NodeJS.LTS` |
 | Tauri CLI | 2.x | `cargo install tauri-cli --version "^2" --locked` |
-| WebView2 | runtime | Ya viene en Windows 10 21H2+/11 |
+| WebView2 | runtime | Already included in Windows 10 21H2+/11 |
 
-WiX (para MSI) y NSIS (para EXE) **no hace falta instalarlos**: la CLI de Tauri
-los descarga sola la primera vez que generas un bundle (necesita internet).
+You **don't need to install** WiX (for MSI) or NSIS (for EXE): the Tauri CLI
+downloads them the first time you build a bundle (needs internet).
 
-> Si `cargo test` falla con *"rustdoc … is not applicable"*, tu toolchain está
-> incompleto: `rustup component add rustc rust-std` o reinstala con
-> `rustup toolchain install stable --profile default`. Los doctests están
-> desactivados, así que no afecta a los tests normales.
+> If `cargo test` fails with *"rustdoc … is not applicable"*, your toolchain is
+> incomplete: `rustup component add rustc rust-std`, or reinstall with
+> `rustup toolchain install stable --profile default`. Doctests are disabled,
+> so this doesn't affect the regular tests.
 
-## 2. Desarrollo
+## 2. Development
 
 ```powershell
-# Motor + módulos + CLI (no necesita Node)
+# Engine + modules + CLI (no Node needed)
 cargo build
 cargo test
 cargo clippy --all-targets
 cargo run -p crp-cli -- scan --mode rapido
 
-# App de escritorio (recarga en caliente de la UI; reinicia al cambiar Rust)
+# Desktop app (hot reload for the UI; restarts when Rust changes)
 cd app
 npm install
 cargo tauri dev
 ```
 
-`cargo tauri dev` lanza `npm run dev` (Vite en `http://localhost:1420`) y abre
-la ventana nativa. La consola muestra los `println!`/errores de Rust.
+`cargo tauri dev` starts `npm run dev` (Vite on `http://localhost:1420`) and
+opens the native window. The console shows Rust's `println!` output and errors.
 
-Comprobación de tipos del frontend: `npm run check` (dentro de `app/`).
+Frontend type checking: `npm run check` (inside `app/`).
 
-### Probar como administrador
-Algunos módulos (`system.windows_temp`, Windows Update, logs…) requieren
-elevación. Abre la terminal como administrador y ejecuta `cargo tauri dev`
-o `crp` desde ahí.
+### Testing as administrator
+Some modules (`system.windows_temp`, Windows Update, logs…) need elevation.
+Open the terminal as administrator and run `cargo tauri dev` or `rcl` from
+there.
 
-## 3. Builds de producción
+## 3. Production builds
 
 ```powershell
 .\scripts\build.ps1                 # npm ci + MSI + EXE
-.\scripts\build.ps1 -SkipInstall    # sin reinstalar node_modules
-.\scripts\build.ps1 -Target msi     # sólo MSI
-.\scripts\build.ps1 -Target nsis    # sólo EXE
+.\scripts\build.ps1 -SkipInstall    # without reinstalling node_modules
+.\scripts\build.ps1 -Target msi     # MSI only
+.\scripts\build.ps1 -Target nsis    # EXE only
 ```
 
-Equivale a `cd app; cargo tauri build`. Resultados:
+Same as `cd app; cargo tauri build`. Output:
 
-| Tipo | Ruta | Uso |
+| Type | Path | Use |
 |---|---|---|
-| Ejecutable portable | `target\release\clean-crp.exe` | Sin instalar (requiere WebView2) |
-| MSI (WiX) | `target\release\bundle\msi\Clean-CRP_<ver>_x64_es-ES.msi` | Empresas / GPO / `msiexec /i … /qn` |
-| EXE (NSIS) | `target\release\bundle\nsis\Clean-CRP_<ver>_x64-setup.exe` | Instalador normal para usuarios |
-| CLI | `target\release\crp.exe` (`cargo build -r -p crp-cli`) | Scripts / tareas programadas |
+| Portable executable | `target\release\rcleaner.exe` | No install (needs WebView2) |
+| MSI (WiX) | `target\release\bundle\msi\RCleaner_<ver>_x64_es-ES.msi` | Companies / GPO / `msiexec /i … /qn` |
+| EXE (NSIS) | `target\release\bundle\nsis\RCleaner_<ver>_x64-setup.exe` | Regular installer for users |
+| CLI | `target\release\rcl.exe` (`cargo build -r -p crp-cli`) | Scripts / scheduled tasks |
 
-El perfil `release` usa LTO completo, `codegen-units = 1` y `strip` para un
-binario pequeño.
+The `release` profile uses full LTO, `codegen-units = 1` and `strip` for a
+small binary.
 
-### Versión
-Se toma de `[workspace.package] version` en el `Cargo.toml` raíz. Cambia sólo ahí.
+### Version
+Taken from `[workspace.package] version` in the root `Cargo.toml`. Change it
+only there.
 
-### Idioma del instalador
-`app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language` (`es-ES`) y
+### Installer language
+`app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language` (`es-ES`) and
 `bundle.windows.nsis.languages` (`Spanish`).
 
-### Icono
-Edita `app/app-icon.svg` y regenera: `cd app; cargo tauri icon app-icon.svg -o src-tauri/icons`.
+### Icon
+Edit `app/app-icon.png` and regenerate: `cd app; cargo tauri icon app-icon.png -o src-tauri/icons`.
 
-### Firma de código (opcional, recomendado para distribuir)
-Sin firma, SmartScreen mostrará "Editor desconocido". Con un certificado:
+### Code signing (optional, recommended for distribution)
+Without a signature, SmartScreen shows "Unknown publisher". With a certificate:
 
 ```jsonc
 // tauri.conf.json → bundle.windows
-"certificateThumbprint": "<huella SHA1>",
+"certificateThumbprint": "<SHA1 thumbprint>",
 "digestAlgorithm": "sha256",
 "timestampUrl": "http://timestamp.digicert.com"
 ```
 
-## 4. Solución de problemas
+## 4. Troubleshooting
 
-| Síntoma | Causa / solución |
+| Symptom | Cause / fix |
 |---|---|
-| `frontendDist ... doesn't exist` al compilar la app | Ejecuta `npm run build` en `app/` o usa `cargo tauri build/dev` (lo hace solo). `cargo build` a secas sólo compila las crates. |
-| Falla la descarga de WiX/NSIS | Sin internet o proxy. Descarga manual: ver docs de Tauri "Windows Installer". |
-| `link.exe not found` | Faltan las Build Tools de VS con C++. |
-| `Found version mismatched Tauri packages` | El crate `tauri` y el paquete npm `@tauri-apps/api` deben compartir *major.minor*. Mira `grep -A1 'name = "tauri"$' Cargo.lock` y fija `@tauri-apps/api` a esa minor en `app/package.json` (p. ej. `~2.11.1`). Al subir Tauri, sube ambos a la vez. |
-| Muchos "omitidos" al limpiar | Archivos en uso (navegador/editor abiertos) o sin permisos: cierra apps o ejecuta como admin. |
+| `frontendDist ... doesn't exist` when building the app | Run `npm run build` in `app/` or use `cargo tauri build/dev` (it does that for you). Plain `cargo build` only compiles the crates. |
+| WiX/NSIS download fails | No internet, or a proxy. Manual download: see the Tauri docs, "Windows Installer". |
+| `link.exe not found` | The VS Build Tools with C++ are missing. |
+| `Found version mismatched Tauri packages` | The `tauri` crate and the npm package `@tauri-apps/api` must share *major.minor*. Check `grep -A1 'name = "tauri"$' Cargo.lock` and pin `@tauri-apps/api` to that minor in `app/package.json` (e.g. `~2.11.1`). When upgrading Tauri, upgrade both together. |
+| Many "skipped" items when cleaning | Files in use (browser/editor open) or missing permissions: close apps or run as admin. |

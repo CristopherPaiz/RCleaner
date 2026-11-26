@@ -1,0 +1,479 @@
+{
+  "_meta": { "name": "English" },
+
+  "category": {
+    "system": "System",
+    "browser": "Browsers",
+    "dev": "Development",
+    "ai": "AI models",
+    "apps": "Apps",
+    "registry": "Registry"
+  },
+  "risk": { "safe": "Safe", "moderate": "Moderate", "advanced": "Advanced" },
+
+  "mode": {
+    "rapido": { "name": "Quick", "desc": "Temp files, thumbnails, error reports, browser caches and the Recycle Bin. Safe for anyone." },
+    "programador": { "name": "Developer", "desc": "Everything in Quick plus pip/uv/npm/pnpm/cargo/gradle/NuGet/Go caches, editors, project artifacts (node_modules, target, __pycache__) and AI models." },
+    "ia": { "name": "AI / ML", "desc": "Downloaded models (Ollama, Hugging Face, LM Studio, Torch) and Python caches." },
+    "gamer": { "name": "Gamer", "desc": "Quick + shader caches, Delivery Optimization and Windows Update downloads." },
+    "profundo": { "name": "Deep", "desc": "Every module. Review the moderate and advanced items before cleaning." }
+  },
+
+  "module": {
+    "system": {
+      "user_temp": {
+        "name": "User temp files",
+        "desc": "Files in %TEMP% older than 24 h. Recent ones are kept in case an install is running.",
+        "target": { "temp": "User temp files (%TEMP%)" }
+      },
+      "windows_temp": {
+        "name": "Windows temp files",
+        "desc": "C:\\Windows\\Temp older than 24 h.",
+        "target": { "temp": "Windows temp files" }
+      },
+      "thumbnails": {
+        "name": "Thumbnails",
+        "desc": "File Explorer thumbnail cache (thumbcache_*.db). Rebuilt as you browse folders.",
+        "target": { "thumbcache": "Thumbnail cache" },
+        "detail": { "thumbcache": "File Explorer locks some of them; those are skipped." }
+      },
+      "wer": {
+        "name": "Error reports",
+        "desc": "Windows Error Reporting files (app crashes) already sent or queued.",
+        "target": { "user": "Error reports (user)", "system": "Error reports (system)" }
+      },
+      "crash_dumps": {
+        "name": "Memory dumps",
+        "desc": "Dumps created when an app or Windows crashes. Only useful for debugging.",
+        "target": { "user": "App crash dumps", "minidump": "System minidumps", "memory": "MEMORY.DMP" }
+      },
+      "windows_logs": {
+        "name": "Windows logs",
+        "desc": "Files in C:\\Windows\\Logs older than 7 days (CBS, DISM, WindowsUpdate…).",
+        "target": { "logs": "Windows logs (7+ days)" }
+      },
+      "shader_cache": {
+        "name": "Shader caches",
+        "desc": "Compiled shaders from DirectX and NVIDIA/AMD/Intel drivers. Rebuilt while gaming (may stutter the first time).",
+        "target": { "d3d": "DirectX (D3DSCache)", "gpu": "GPU drivers", "steam": "Steam (shadercache)" },
+        "detail": { "steam": "Steam downloads or compiles them again when each game starts." }
+      },
+      "delivery_optimization": {
+        "name": "Delivery Optimization",
+        "desc": "Peer-to-peer cache for Windows and Store updates.",
+        "target": { "cache": "Delivery Optimization cache" }
+      },
+      "windows_update": {
+        "name": "Windows Update downloads",
+        "desc": "Packages already downloaded to SoftwareDistribution\\Download.",
+        "target": { "download": "Windows Update downloads" },
+        "detail": { "download": "If an update is in progress its files are in use and will be skipped." }
+      },
+      "recycle_bin": {
+        "name": "Recycle Bin",
+        "desc": "Empties the Recycle Bin on every drive. Whatever is inside is permanently deleted.",
+        "detail": "Permanently deleted."
+      }
+    },
+    "browser": {
+      "chromium": {
+        "desc": "Web, code and GPU cache of every profile.",
+        "cache": "{name} cache",
+        "service_workers": "{name} service workers",
+        "service_workers_detail": "Offline data of sites and PWAs; downloaded again when you visit them."
+      },
+      "firefox": {
+        "name": "Mozilla Firefox",
+        "desc": "Web cache (cache2), startupCache and thumbnails of every profile.",
+        "target": { "cache": "Firefox cache" }
+      }
+    },
+    "dev": {
+      "pip": { "name": "pip cache", "desc": "Packages downloaded by pip (wheels and http). Same as `pip cache purge`.", "target": { "cache": "pip cache" } },
+      "uv": { "name": "uv cache", "desc": "uv (Astral) cache. Existing environments keep working.", "target": { "cache": "uv cache" } },
+      "poetry": { "name": "Poetry cache", "desc": "Packages and artifacts downloaded by Poetry.", "target": { "cache": "Poetry cache" } },
+      "conda": { "name": "conda packages", "desc": "Tarballs (.conda/.tar.bz2) already extracted in pkgs. Same as `conda clean --tarballs`.", "target": { "tarballs": "conda tarballs" } },
+      "npm": { "name": "npm cache", "desc": "npm cache (_cacache, _npx, _logs). Same as `npm cache clean --force`.", "target": { "cache": "npm cache" } },
+      "pnpm": {
+        "name": "pnpm store",
+        "desc": "pnpm content-addressable store. Existing node_modules keep working (hard links).",
+        "target": { "store": "pnpm store" },
+        "detail": { "store": "After cleaning, pnpm downloads packages again on install." }
+      },
+      "yarn": { "name": "Yarn cache", "desc": "Yarn classic and Yarn Berry cache.", "target": { "cache": "Yarn cache" } },
+      "bun": { "name": "Bun cache", "desc": "Packages downloaded by Bun.", "target": { "cache": "Bun cache" } },
+      "cargo": {
+        "name": "Cargo cache",
+        "desc": "Downloaded and extracted crates (registry/cache, registry/src, git/checkouts).",
+        "target": { "registry": "Cargo cache" },
+        "detail": { "registry": "Downloaded again on the next build (won't work offline)." }
+      },
+      "go": { "name": "Go caches", "desc": "Build cache (go-build) and downloaded modules.", "target": { "build": "Go build cache", "mod": "Go modules" } },
+      "gradle": {
+        "name": "Gradle caches",
+        "desc": "Dependencies, wrapper distributions and daemon logs.",
+        "target": { "caches": "Gradle cache", "wrapper": "Gradle Wrapper distributions", "daemon": "Gradle daemon logs" }
+      },
+      "maven": { "name": "Maven repository", "desc": "Dependencies downloaded to ~/.m2/repository.", "target": { "repo": "Local Maven repository" } },
+      "nuget": {
+        "name": "NuGet caches",
+        "desc": "NuGet global packages and HTTP caches. Same as `dotnet nuget locals all --clear`.",
+        "target": { "http": "NuGet HTTP cache", "packages": "NuGet global packages" }
+      },
+      "editors": {
+        "name": "Editor caches",
+        "desc": "VS Code, Cursor, VSCodium and Windsurf: caches, downloaded VSIX files and logs. Extensions and settings are not touched.",
+        "cache_of": "{name} cache"
+      },
+      "jetbrains": {
+        "name": "JetBrains caches",
+        "desc": "Caches and indexes of IntelliJ, PyCharm, WebStorm, Rider… (re-indexed on next open).",
+        "target": { "caches": "JetBrains IDE caches" }
+      },
+      "projects": {
+        "name": "Project artifacts",
+        "desc": "node_modules, Cargo target, __pycache__, .venv and web framework caches inside your project folders. Rebuilt with npm install / cargo build / etc.",
+        "python_caches": "Python caches (__pycache__, .pytest_cache, .mypy_cache, .ruff_cache)",
+        "folders_one": "{n} folder",
+        "folders_other": "{n} folders"
+      }
+    },
+    "ai": {
+      "ollama": {
+        "name": "Ollama models",
+        "desc": "Each model downloaded with `ollama pull`. Layers shared with other models are kept.",
+        "total": "Total size {size}",
+        "shared": "{size} shared with other models",
+        "bad_manifest": "unreadable manifest: {path}"
+      },
+      "huggingface": {
+        "name": "Hugging Face",
+        "desc": "Models and datasets from the Hugging Face hub (transformers, diffusers, hf download…), one by one.",
+        "kind": { "model": "Model", "dataset": "Dataset", "space": "Space" }
+      },
+      "lmstudio": { "name": "LM Studio models", "desc": "GGUF/MLX models downloaded in LM Studio, one by one." },
+      "misc": {
+        "name": "Other AI caches",
+        "desc": "Torch Hub checkpoints, Whisper and Keras models.",
+        "target": { "torch": "Torch Hub", "whisper": "Whisper models", "keras": "Keras models" }
+      }
+    }
+  },
+
+  "core": {
+    "app_running": "{name} is open ({exe}): close it to free everything; files in use will be skipped.",
+    "module_panic": "the module failed unexpectedly",
+    "mode_exists": "mode '{id}' already exists; change its id",
+    "mode_bad_id": "invalid id: use lowercase letters, digits, '-' or '_'",
+    "mode_builtin": "'{id}' is a built-in mode",
+    "mode_incomplete": "a mode needs a name and at least one module"
+  },
+  "error": {
+    "io": "I/O error on {path}: {error}",
+    "protected": "protected path, it can't be cleaned: {path}",
+    "requires_admin": "administrator rights are required",
+    "cancelled": "operation cancelled",
+    "unsupported": "module '{id}' has no custom cleaning",
+    "unknown_module": "unknown module: {id}",
+    "command": "command '{program}' failed: {error}",
+    "config": "invalid configuration: {error}",
+    "not_in_path": "not found in PATH",
+    "not_a_folder": "not a folder"
+  },
+  "disk": {
+    "small_items_one": "{n} small item",
+    "small_items_other": "{n} small items"
+  },
+  "protect": {
+    "hiberfil": "Hibernation file. Windows uses it for hibernation and Fast Startup. To free it, run `powercfg /h off` as administrator.",
+    "pagefile": "Windows virtual memory. Change its size in Settings → System → About → Advanced system settings → Performance.",
+    "swapfile": "Virtual memory Windows uses for apps. It is managed together with pagefile.sys.",
+    "registry": "Part of your user registry. Deleting it would break your Windows account.",
+    "boot": "Needed to start Windows.",
+    "recycle_bin": "Recycle Bin. Empty it from Cleanup instead.",
+    "restore": "Restore points and system data. Managed by Windows (System Protection).",
+    "windows_old": "Previous Windows or update files. Remove them from Settings → System → Storage → Temporary files.",
+    "installed": "Belongs to Windows or an installed program. Uninstall the program instead.",
+    "drive_root": "Top-level item of a drive. Open it and choose what's inside.",
+    "base_folder": "Base folder of a user profile or of Windows apps. Open it and choose what's inside.",
+    "system_file": "Windows marks this as a system file."
+  },
+
+  "app": {
+    "stale_scan": "Some items no longer exist; analyze again.",
+    "unknown_path": "Unknown path",
+    "elevate_failed": "Couldn't restart as administrator: {error}",
+    "system_path": "{path} belongs to the system or an installed program",
+    "bad_path": "Invalid path",
+    "no_permission": "No permission to read that folder",
+    "unknown_item": "Unknown item",
+    "no_analysis": "There is no analysis; analyze again.",
+    "item_gone": "An item no longer exists; analyze again.",
+    "analysis_dropped": "The analysis was discarded",
+    "pick_existing_folder": "Choose at least one folder that exists",
+    "search_cancelled": "Search cancelled",
+    "unknown_file": "Unknown file",
+    "no_search": "There is no search; search again.",
+    "file_gone": "A file is no longer in the list",
+    "keep_one_copy": "Keep at least one copy of every file"
+  },
+
+  "ui": {
+    "nav": { "aria": "Sections", "home": "Overview", "clean": "Cleanup", "space": "Space", "dupes": "Duplicates", "settings": "Settings" },
+    "admin": {
+      "label": "Admin",
+      "restart": "Restart as administrator",
+      "running": "Running as administrator",
+      "confirm": "RCleaner will restart as administrator so it can clean system folders. Continue?"
+    },
+    "window": { "minimize": "Minimize", "maximize": "Maximize", "restore": "Restore", "close": "Close" },
+    "common": {
+      "working": "Working",
+      "close": "Close",
+      "stop": "Stop",
+      "done": "Done",
+      "filter": "Filter",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "remove": "Remove",
+      "local_disk": "Local disk",
+      "show_in_explorer": "Show in File Explorer",
+      "to_bin": "To Recycle Bin",
+      "move_to_bin": "Move to Recycle Bin",
+      "moved_to_bin": "moved to the Recycle Bin",
+      "and_more": "… and {n} more",
+      "tap_to_stop": "Tap the circle to stop",
+      "no_match": "Nothing matches the filter.",
+      "items_one": "{n} item",
+      "items_other": "{n} items",
+      "files_one": "{n} file",
+      "files_other": "{n} files",
+      "folders_one": "{n} folder",
+      "folders_other": "{n} folders",
+      "modules_one": "{n} module",
+      "modules_other": "{n} modules"
+    },
+    "age": {
+      "today": "today",
+      "yesterday": "yesterday",
+      "days_one": "{n} day ago",
+      "days_other": "{n} days ago",
+      "months_one": "{n} month ago",
+      "months_other": "{n} months ago",
+      "years_one": "{n} year ago",
+      "years_other": "{n} years ago"
+    },
+    "home": {
+      "free": "free",
+      "free_n": "{size} free",
+      "usage": "{used} used of {total} · {pct} % full",
+      "clean_text": "Temp files, caches and leftovers",
+      "space_text": "What fills your disk",
+      "dupes_text": "Extra copies",
+      "last_clean": "Last cleanup",
+      "last_n": "{size} over the last {n}",
+      "never": "You haven't cleaned anything yet.",
+      "quick_clean": "Quick clean"
+    },
+    "clean": {
+      "title": "Cleanup",
+      "lead": "Temp files, caches and leftovers you don't need. Analyzing never deletes anything.",
+      "mode": "Mode",
+      "analyze": "Analyze",
+      "analyzing": "Analyzing…",
+      "preparing": "Preparing",
+      "progress": "{done} of {total} modules · tap the circle to stop",
+      "freed": "freed · {n} items in {secs} s",
+      "skipped_one": "{n} file was in use or not accessible and was left alone.",
+      "skipped_other": "{n} files were in use or not accessible and were left alone.",
+      "problems_one": "See {n} item with warnings",
+      "problems_other": "See {n} items with warnings",
+      "selected_of": "selected of {total} found · {mode}",
+      "sort_size": "Size",
+      "sort_age": "Age",
+      "mark": "Select",
+      "mark_safe": "Safe items",
+      "mark_all": "All",
+      "mark_none": "None",
+      "needs_admin": "Some items need administrator rights (Admin button in the menu).",
+      "cleaning": "Cleaning {done} of {total}",
+      "restart": "Start over",
+      "clean": "Clean"
+    },
+    "results": {
+      "select_group": "Select {name}",
+      "warnings_one": "{n} with a warning",
+      "warnings_other": "{n} with warnings",
+      "marked": "{size} selected",
+      "requires_admin": "Requires administrator",
+      "errors_one": "{n} module with errors",
+      "errors_other": "{n} modules with errors"
+    },
+    "confirm": {
+      "title": "Clean {size}?",
+      "text_one": "{n} item will be deleted. This can't be undone.",
+      "text_other": "{n} items will be deleted. This can't be undone.",
+      "risky_one": "{n} item is not “Safe”",
+      "risky_other": "{n} items are not “Safe”"
+    },
+    "space": {
+      "title": "Space",
+      "lead": "See what fills your disk, folder by folder. Nothing is deleted unless you choose it.",
+      "free_of": "{free} free of {total}",
+      "pick_folder": "Choose a folder…",
+      "path": "Path",
+      "other_drive": "Another drive",
+      "tab_folder": "Contents",
+      "tab_largest": "Largest files",
+      "tab_types": "Types",
+      "pick": "Add to the list to delete",
+      "unpick": "Remove from the list",
+      "empty_folder": "Empty folder.",
+      "no_files": "No files.",
+      "types_note": "The whole analyzed drive, by file type.",
+      "no_ext": "no ext.",
+      "total_in": "{size} in {files}",
+      "free_on": "{size} free on {drive}",
+      "unreadable_one": "{n} folder not accessible",
+      "unreadable_other": "{n} folders not accessible",
+      "use_admin": "(use Admin)",
+      "picked_one": "{n} picked",
+      "picked_other": "{n} picked",
+      "clear_picks": "clear",
+      "hint_before": "Use",
+      "hint_after": "to choose what to delete",
+      "confirm_title": "Move {size} to the Recycle Bin?",
+      "confirm_text": "You can restore it from the Recycle Bin. If something doesn't fit in it, Windows will warn you before deleting it."
+    },
+    "sunburst": {
+      "aria": "Usage map of {name}",
+      "open": "Click to open",
+      "grouped": "Grouped",
+      "file": "File",
+      "up": "up"
+    },
+    "dupes": {
+      "title": "Duplicates",
+      "lead": "Find exact copies of your files. They are compared by content, not by name.",
+      "search": "Search",
+      "comparing": "Comparing…",
+      "candidates": "{done} of {total} candidates",
+      "listing": "Looking for files…",
+      "checked": "{n} checked",
+      "add_folder": "Add folder",
+      "min_size": "Ignore files smaller than",
+      "include_system": "Include system and development folders",
+      "summary": "in extra copies · {groups} · {files}",
+      "groups_one": "{n} group",
+      "groups_other": "{n} groups",
+      "files_checked_one": "{n} file checked",
+      "files_checked_other": "{n} files checked",
+      "filter_path": "Filter by path",
+      "mark_keep": "Select all and keep",
+      "keep_oldest": "the oldest",
+      "keep_newest": "the newest",
+      "keep_shortest": "the shortest path",
+      "unmark_all": "Unselect all",
+      "cloud_skipped_one": "{n} cloud file without a local copy was not checked",
+      "cloud_skipped_other": "{n} cloud files without a local copy were not checked",
+      "mark_file": "Select {path}",
+      "kept": "Kept",
+      "none": "No duplicates with these settings.",
+      "show_more": "Show {n} more groups",
+      "new_search": "New search",
+      "marked_one": "{n} copy selected",
+      "marked_other": "{n} copies selected",
+      "confirm_title_one": "Move {n} copy to the Recycle Bin?",
+      "confirm_title_other": "Move {n} copies to the Recycle Bin?",
+      "confirm_text": "You'll free {size}. At least one copy of every file is kept, and you can restore what you delete from the Recycle Bin."
+    },
+    "mode_editor": {
+      "aria": "Mode editor",
+      "new": "New mode",
+      "edit": "Edit mode",
+      "copy_of": "{name} (copy)",
+      "name": "Name",
+      "name_ph": "My weekly cleanup",
+      "desc": "Description",
+      "desc_ph": "What it cleans and when to use it",
+      "icon": "Icon",
+      "err_name": "Give it a name.",
+      "err_id": "The name needs letters or digits.",
+      "err_modules": "Choose at least one module."
+    },
+    "settings": {
+      "saved_in": "Saved instantly to",
+      "appearance": "Appearance",
+      "theme": "Theme",
+      "theme_system": "System",
+      "theme_light": "Light",
+      "theme_dark": "Dark",
+      "language": "Language",
+      "language_hint": "Missing yours? You can help translate RCleaner on GitHub.",
+      "language_system": "System ({name})",
+      "dev_roots": "Project folders",
+      "dev_roots_hint": "Where to look for",
+      "auto": "automatic",
+      "no_folders": "No folders.",
+      "back_to_auto": "Go back to automatic detection",
+      "exclusions": "Exclusions",
+      "exclusions_hint": "Folders RCleaner never analyzes or deletes, in any section.",
+      "no_exclusions": "No exclusions.",
+      "default_mode": "Default mode",
+      "default_mode_hint": "Used by “Quick clean” and selected on start.",
+      "custom_modes": "Custom modes",
+      "custom_modes_hint": "Combine the modules you want. They are saved as TOML in the folder",
+      "selectors_one": "{n} selector",
+      "selectors_other": "{n} selectors",
+      "start_from": "Start from a built-in one:",
+      "delete_mode": "Delete the mode “{name}”?",
+      "about": "About",
+      "module_count_one": "{n} cleaning module",
+      "module_count_other": "{n} cleaning modules",
+      "config_folder": "Settings folder"
+    }
+  },
+
+  "cli": {
+    "custom": "custom",
+    "analyzing": "Analyzing {path}…",
+    "files_one": "{n} file",
+    "files_other": "{n} files",
+    "folders_one": "{n} folder",
+    "folders_other": "{n} folders",
+    "unreadable_one": "{n} folder not accessible (run as administrator)",
+    "unreadable_other": "{n} folders not accessible (run as administrator)",
+    "entries": "Folders and files",
+    "largest": "Largest files",
+    "types": "Types",
+    "no_ext": "no extension",
+    "comparing": "Comparing",
+    "groups_one": "{n} group",
+    "groups_other": "{n} groups",
+    "recoverable": "{size} recoverable",
+    "files_checked_one": "{n} file checked",
+    "files_checked_other": "{n} files checked",
+    "info": {
+      "settings": "Settings",
+      "admin": "Administrator",
+      "profile": "Profile",
+      "language": "Language",
+      "projects": "Projects",
+      "exclusions": "Exclusions"
+    },
+    "yes": "yes",
+    "no": "no",
+    "unknown_mode": "unknown mode '{id}'. Run `rcl modes` to list them.",
+    "needs_admin": "needs admin",
+    "scan_total": "Total found: {total}  ·  preselected (safe): {safe}  ·  {ms} ms",
+    "some_need_admin": "Some items need to be run as administrator.",
+    "nothing": "Nothing to clean with those criteria.",
+    "cleaning": "cleaning…",
+    "dry_run": "DRY RUN: {size} would be freed. Repeat with --yes to clean.",
+    "freed": "Freed: {size}  ·  skipped (in use/no access): {skipped}  ·  {ms} ms"
+  }
+}

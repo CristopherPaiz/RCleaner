@@ -2,6 +2,7 @@
 
 use crate::context::ScanContext;
 use crate::error::{Error, Result};
+use crate::i18n::t;
 use crate::model::{Category, CleanOutcome, Finding, Risk};
 use serde::{Deserialize, Serialize};
 
@@ -23,11 +24,13 @@ pub struct ModuleMeta {
 }
 
 impl ModuleMeta {
-    pub fn new(id: &str, name: &str, category: Category) -> Self {
+    /// Nombre y descripción se leen de `module.<id>.name` / `module.<id>.desc`
+    /// en `locales/*.json` (en el idioma actual).
+    pub fn new(id: &str, category: Category) -> Self {
         Self {
             id: id.to_owned(),
-            name: name.to_owned(),
-            description: String::new(),
+            name: t(&format!("module.{id}.name")),
+            description: t(&format!("module.{id}.desc")),
             category,
             risk: Risk::Safe,
             requires_admin: false,
@@ -41,8 +44,14 @@ impl ModuleMeta {
         self
     }
 
-    pub fn describe(mut self, description: &str) -> Self {
-        self.description = description.to_owned();
+    /// Nombre propio que no se traduce (p. ej. una marca).
+    pub fn named(mut self, name: &str) -> Self {
+        self.name = name.to_owned();
+        self
+    }
+
+    pub fn describe(mut self, description: impl Into<String>) -> Self {
+        self.description = description.into();
         self
     }
 

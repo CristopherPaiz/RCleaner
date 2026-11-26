@@ -1,10 +1,17 @@
 <script lang="ts">
   import { app } from "../lib/app.svelte";
   import { api, type Finding } from "../lib/api";
-  import { formatBytes } from "../lib/format";
+  import { formatBytes, formatCount, modeColors, splitBytes } from "../lib/format";
   import ResultList from "../components/ResultList.svelte";
   import ConfirmDialog from "../components/ConfirmDialog.svelte";
+  import Glyph from "../components/Glyph.svelte";
+  import OrbButton from "../components/OrbButton.svelte";
+  import ActionButton from "../components/ActionButton.svelte";
+  import Dock from "../components/Dock.svelte";
   import Icon from "../components/Icon.svelte";
+  import { fade } from "svelte/transition";
+  import { morph } from "../lib/motion";
+  import { i18n, t, tn } from "../lib/i18n.svelte";
 
   let confirming = $state(false);
   let query = $state("");
@@ -17,6 +24,7 @@
   const totalBytes = $derived(findings.reduce((s, f) => s + f.bytes, 0));
   const percent = $derived(app.progress.total ? Math.round((app.progress.done / app.progress.total) * 100) : 0);
   const needsAdmin = $derived(!app.info?.is_admin && findings.some((f) => f.requires_admin));
+  const moduleName = $derived(app.modules.find((m) => m.id === app.progress.current)?.name ?? "");
 
   const freed = $derived(app.cleanReport?.outcomes.reduce((s, o) => s + o.freed_bytes, 0) ?? 0);
   const skipped = $derived(app.cleanReport?.outcomes.reduce((s, o) => s + o.skipped_items, 0) ?? 0);
@@ -25,6 +33,8 @@
       .filter((o) => o.errors.length > 0)
       .map((o) => ({ label: findings.find((f) => f.id === o.finding_id)?.label ?? o.finding_id, errors: o.errors })),
   );
+  const big = $derived(splitBytes(chosenBytes));
+  const freedParts = $derived(splitBytes(freed));
 
   function select(which: "safe" | "all" | "none") {
     app.selected.clear();
@@ -35,123 +45,236 @@
     }
   }
 
+  // Píldora que se desliza bajo el modo elegido (en vez de saltar de botón en botón).
+  let seg = $state<HTMLDivElement>();
+  let pill = $state<{ x: number; y: number; w: number; h: number } | null>(null);
+  let pillReady = $state(false);
+  function placePill() {
+    const on = seg?.querySelector<HTMLElement>("button.on");
+    if (!on) return (pill = null);
+    pill = { x: on.offsetLeft, y: on.offsetTop, w: on.offsetWidth, h: on.offsetHeight };
+  }
+  $effect(() => {
+    void app.mode?.id;
+    if (!seg) return;
+    placePill();
+    const ro = new ResizeObserver(placePill);
+    ro.observe(seg);
+    requestAnimationFrame(() => (pillReady = true));
+    return () => ro.disconnect();
+  });
+
   async function doClean() {
     confirming = false;
     await app.clean();
   }
 </script>
 
-<div class="view">
-  <header>
-    <div>
-      <h1>{app.mode?.name ?? "Limpiar"}</h1>
-      <p class="muted">{app.mode?.description ?? "Elige un modo en el menú."}</p>
-    </div>
-    <div class="actions">
-      {#if app.busy}
-        <button class="ghost" onclick={() => api.cancel()}>Cancelar</button>
+{#if app.phase === "idle" || (app.phase === "scanning" && !report)}
+  <!-- Inicio y análisis: el botón central es el icono del modo -->
+  {@const scanning = app.phase === "scanning"}
+  <div class="stage">
+    <OrbButton
+      icon={app.mode?.icon || "sparkles"}
+      label={t("ui.clean.analyze")}
+      busy={scanning}
+      percent={scanning ? percent : null}
+      disabled={!app.mode}
+      onclick={() => (scanning ? api.cancel() : app.scan())}
+    />
+    <!-- Alto fijo: el botón nunca se mueve al cambiar de modo ni al analizar -->
+    <div class="info">
+      {#if scanning}
+        <div class="blk" transition:fade={{ duration: 220 }}>
+          <h1>{t("ui.clean.analyzing")}</h1>
+          <p class="dim lead">{moduleName || t("ui.clean.preparing")}</p>
+          <p class="faint num small">{t("ui.clean.progress", { done: app.progress.done, total: app.progress.total })}</p>
+        </div>
       {:else}
-        <button class="primary" onclick={() => app.scan()} disabled={!app.mode}>
-          {report ? "Volver a analizar" : "Analizar"}
-        </button>
+        <div class="blk" transition:fade={{ duration: 220 }}>
+          <h1>{t("ui.clean.title")}</h1>
+          <p class="dim lead">{t("ui.clean.lead")}</p>
+          <div class="modes" role="tablist" aria-label={t("ui.clean.mode")}>
+            <div class="segmented" bind:this={seg}>
+              {#if pill}
+                <span
+                  class="pill"
+                  class:ready={pillReady}
+                  style:transform="translate({pill.x}px, {pill.y}px)"
+                  style:width="{pill.w}px"
+                  style:height="{pill.h}px"
+                ></span>
+              {/if}
+              {#each app.modes as m (m.id)}
+                {@const [ca] = modeColors(m.icon)}
+                <button
+                  class:on={app.mode?.id === m.id}
+                  role="tab"
+                  aria-selected={app.mode?.id === m.id}
+                  style:--mc={ca}
+                  onclick={() => app.setMode(m)}
+                >
+                  <span class="mi"><Icon name={m.icon || "star"} size={15} /></span>
+                  <span class="nm" data-t={m.name}>{m.name}</span>
+                </button>
+              {/each}
+            </div>
+            <div class="desc">
+              {#key app.mode?.id}
+                <p class="faint" in:morph={{ scale: 0.96, blur: 4, duration: 320 }} out:fade={{ duration: 140 }}>
+                  {app.mode?.description ?? ""}
+                </p>
+              {/key}
+            </div>
+          </div>
+        </div>
       {/if}
+    </div>
+  </div>
+{:else if app.phase === "done" && app.cleanReport}
+  <div class="stage">
+    <Glyph icon="check" success />
+    <h1 class="hero-num num">{freedParts[0]}<span class="unit">{freedParts[1]}</span></h1>
+    <p class="dim lead">
+      {t("ui.clean.freed", { n: app.cleanReport.outcomes.length, secs: (app.cleanReport.elapsed_ms / 1000).toLocaleString(i18n.lang, { maximumFractionDigits: 1 }) })}
+    </p>
+    {#if skipped > 0}
+      <p class="faint small">{tn("ui.clean.skipped", skipped)}</p>
+    {/if}
+    {#if problems.length > 0}
+      <details class="problems">
+        <summary>{tn("ui.clean.problems", problems.length)}</summary>
+        {#each problems as p (p.label)}
+          <div class="problem">
+            <strong>{p.label}</strong>
+            {#each p.errors.slice(0, 5) as e, i (i)}<div class="mono faint">{e}</div>{/each}
+          </div>
+        {/each}
+      </details>
+    {/if}
+  </div>
+  <Dock>
+    {#snippet center()}
+      <ActionButton label={t("ui.common.done")} onclick={() => app.reset()} />
+    {/snippet}
+  </Dock>
+{:else if report}
+  <!-- Resultados -->
+  <header class="results-head">
+    <div class="total">
+      <div class="hero-num num">{big[0]}<span class="unit">{big[1]}</span></div>
+      <p class="dim">
+        {t("ui.clean.selected_of", { total: formatBytes(totalBytes), mode: app.mode?.name ?? "" })}
+      </p>
+    </div>
+    <div class="tools">
+      <label class="field search">
+        <Icon name="search" size={15} />
+        <input placeholder={t("ui.common.filter")} bind:value={query} />
+      </label>
+      <div class="segmented">
+        <button class:on={sortBy === "size"} onclick={() => (sortBy = "size")}>{t("ui.clean.sort_size")}</button>
+        <button class:on={sortBy === "age"} onclick={() => (sortBy = "age")}>{t("ui.clean.sort_age")}</button>
+      </div>
     </div>
   </header>
 
-  {#if app.phase === "scanning" || app.phase === "cleaning"}
-    <section class="progress">
-      <div class="bar"><div style:width="{percent}%"></div></div>
-      <p class="muted">
-        {app.phase === "scanning" ? "Analizando" : "Limpiando"} · {app.progress.done}/{app.progress.total} · {percent}%
-        <span class="mono">{app.progress.current}</span>
-      </p>
-    </section>
-  {:else if app.phase === "done" && app.cleanReport}
-    <section class="summary">
-      <h2>{formatBytes(freed)} liberados</h2>
-      <p class="muted">
-        {app.cleanReport.outcomes.length} elementos en {(app.cleanReport.elapsed_ms / 1000).toFixed(1)} s
-        {#if skipped > 0}· {skipped} archivos omitidos (en uso o sin permiso){/if}
-      </p>
-      {#if problems.length > 0}
-        <details>
-          <summary>Ver {problems.length} elementos con avisos</summary>
-          {#each problems as p (p.label)}
-            <div class="problem">
-              <strong>{p.label}</strong>
-              {#each p.errors.slice(0, 5) as e, i (i)}<div class="mono">{e}</div>{/each}
-            </div>
-          {/each}
-        </details>
-      {/if}
-      <button class="primary" onclick={() => app.scan()}>Analizar de nuevo</button>
-    </section>
-  {:else if report}
+  <div class="subbar">
+    <span class="faint">{t("ui.clean.mark")}</span>
+    <button class="btn quiet small" onclick={() => select("safe")}>{t("ui.clean.mark_safe")}</button>
+    <button class="btn quiet small" onclick={() => select("all")}>{t("ui.clean.mark_all")}</button>
+    <button class="btn quiet small" onclick={() => select("none")}>{t("ui.clean.mark_none")}</button>
     {#if needsAdmin}
-      <div class="hint">
-        <Icon name="shield" size={16} />
-        Hay elementos que requieren administrador. Usa "Reiniciar como administrador" en el menú para incluirlos.
-      </div>
+      <span class="hint"><Icon name="shield" size={14} /> {t("ui.clean.needs_admin")}</span>
     {/if}
-    <div class="toolbar">
-      <label class="search">
-        <Icon name="search" size={15} />
-        <input placeholder="Filtrar…" bind:value={query} />
-      </label>
-      <div class="seg">
-        <button class:on={sortBy === "size"} onclick={() => (sortBy = "size")}>Tamaño</button>
-        <button class:on={sortBy === "age"} onclick={() => (sortBy = "age")}>Antigüedad</button>
-      </div>
-      <span class="spacer"></span>
-      <span class="muted">Seleccionar:</span>
-      <button class="ghost sm" onclick={() => select("safe")}>Seguros</button>
-      <button class="ghost sm" onclick={() => select("all")}>Todo</button>
-      <button class="ghost sm" onclick={() => select("none")}>Nada</button>
+  </div>
+
+  {#if app.phase === "cleaning"}
+    <div class="cleaning">
+      <div class="meter wide"><div style:width="{percent}%"></div></div>
+      <span class="faint num">{t("ui.clean.cleaning", { done: app.progress.done, total: app.progress.total })}</span>
     </div>
-    <ResultList {report} {query} {sortBy} />
-  {:else}
-    <section class="empty">
-      <p>Pulsa <strong>Analizar</strong> para ver qué se puede limpiar. Analizar nunca borra nada.</p>
-    </section>
   {/if}
 
-  {#if app.phase === "results" && report}
-    <footer>
-      <div>
-        <strong>{formatBytes(chosenBytes)}</strong>
-        <span class="muted">seleccionados de {formatBytes(totalBytes)} · {chosen.length} elementos</span>
+  <ResultList {report} {query} {sortBy} />
+
+  <Dock>
+    {#snippet left()}
+      <button class="btn quiet" disabled={app.busy} onclick={() => app.reset()}>
+        <Icon name="back" size={16} /> {t("ui.clean.restart")}
+      </button>
+    {/snippet}
+    {#snippet center()}
+      {#if app.phase === "cleaning"}
+        <ActionButton label={t("ui.common.stop")} variant="stop" onclick={() => api.cancel()} />
+      {:else}
+        <ActionButton label={t("ui.clean.clean")} disabled={chosen.length === 0} onclick={() => (confirming = true)} />
+      {/if}
+    {/snippet}
+    {#snippet right()}
+      <div class="sel">
+        <strong class="num">{formatBytes(chosenBytes)}</strong>
+        <span class="faint">{tn("ui.common.items", chosen.length)}</span>
       </div>
-      <button class="danger" disabled={chosen.length === 0} onclick={() => (confirming = true)}>Limpiar</button>
-    </footer>
-  {/if}
-</div>
+    {/snippet}
+  </Dock>
+{/if}
 
 {#if confirming}
   <ConfirmDialog findings={chosen} onconfirm={doClean} oncancel={() => (confirming = false)} />
 {/if}
 
 <style>
-  .view { display: flex; flex-direction: column; min-height: 0; flex: 1; }
-  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 22px 28px 12px; }
-  h1 { margin: 0 0 4px; font-size: 22px; }
-  header p { margin: 0; max-width: 75ch; }
-  .actions { display: flex; gap: 8px; flex-shrink: 0; }
-  .progress, .summary, .empty { padding: 36px 28px; }
-  .bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
-  .bar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.2s; }
-  .summary h2 { font-size: 32px; margin: 0 0 6px; color: var(--safe); }
-  details { margin: 14px 0 18px; }
-  summary { cursor: pointer; color: var(--warn); }
+  .stage {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 0 32px; text-align: center; min-height: 0; overflow: auto;
+  }
+  .stage h1 { font-size: 30px; margin-top: 26px; }
+  .stage { padding-bottom: 40px; }
+  .info { display: grid; width: 100%; min-height: 270px; }
+  .blk { grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .modes .segmented { position: relative; }
+  .modes .segmented button { position: relative; z-index: 1; transition: color 0.2s; }
+  .modes .segmented button.on { background: none; box-shadow: none; }
+  .pill {
+    position: absolute; left: 0; top: 0; border-radius: 8px; pointer-events: none;
+    background: color-mix(in srgb, var(--a) 16%, var(--raise-2));
+    box-shadow: 0 1px 0 var(--line-2) inset, 0 1px 2px rgb(0 0 0 / 0.25), 0 0 18px -6px color-mix(in srgb, var(--a) 60%, transparent);
+  }
+  .pill.ready { transition: transform 0.38s cubic-bezier(0.3, 0.9, 0.3, 1), width 0.38s cubic-bezier(0.3, 0.9, 0.3, 1); }
+  .mi { color: var(--mc); display: inline-grid; }
+  /* Reserva el ancho en negrita para que los botones no cambien de tamaño. */
+  .nm { display: inline-grid; }
+  .nm::after { content: attr(data-t); font-weight: 600; height: 0; visibility: hidden; overflow: hidden; }
+  .lead { font-size: 15px; max-width: 56ch; }
+  .small { font-size: 12px; }
+  .modes { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 100%; }
+  .desc { display: grid; width: 60ch; max-width: 100%; height: 4.5em; line-height: 1.5; font-size: 13px; }
+  .desc p { grid-area: 1 / 1; margin: 0; }
+  .modes .segmented { flex-wrap: wrap; justify-content: center; }
+  .meter { width: 260px; height: 4px; border-radius: 99px; background: var(--line-2); overflow: hidden; margin-top: 14px; }
+  .meter > div { height: 100%; background: linear-gradient(90deg, var(--a), var(--b)); transition: width 0.25s; }
+  .meter.wide { width: 100%; margin: 0; }
+
+  .hero-num { font-family: var(--font-display); font-size: 46px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
+  .unit { font-size: 0.45em; font-weight: 500; color: var(--text-2); margin-left: 6px; letter-spacing: 0; }
+  .stage .hero-num { margin-top: 22px; }
+
+  .problems { margin-top: 18px; text-align: left; max-width: 640px; width: 100%; }
+  .problems summary { cursor: pointer; color: var(--warn); text-align: center; }
   .problem { margin: 10px 0; }
-  .problem .mono { margin: 2px 0 0; color: var(--muted); word-break: break-all; }
-  .hint { display: flex; align-items: center; gap: 8px; margin: 0 28px 10px; padding: 8px 12px; border-radius: 8px; background: var(--accent-bg); color: var(--accent); font-size: 13px; }
-  .toolbar { display: flex; align-items: center; gap: 8px; padding: 0 28px 12px; flex-wrap: wrap; }
-  .search { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--muted); }
-  .search input { border: 0; outline: 0; background: none; color: var(--text); font: inherit; width: 200px; }
-  .seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .seg button { border: 0; background: var(--panel); color: var(--muted); font: inherit; padding: 6px 12px; cursor: pointer; }
-  .seg button.on { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
-  .spacer { flex: 1; }
-  footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 28px; border-top: 1px solid var(--border); background: var(--panel); }
-  footer strong { font-size: 18px; margin-right: 8px; }
+  .problem .mono { word-break: break-all; margin-top: 2px; }
+
+  .results-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding: 4px 32px 10px; flex-wrap: wrap; }
+  .tools { display: flex; gap: 8px; align-items: center; }
+  .search { width: 220px; }
+  .subbar { display: flex; align-items: center; gap: 4px; padding: 0 32px 6px; flex-wrap: wrap; }
+  .subbar > .faint { font-size: 13px; margin-right: 4px; }
+  .hint { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--warn); }
+  .cleaning { display: flex; align-items: center; gap: 14px; padding: 6px 32px 10px; font-size: 12px; }
+  .cleaning span { white-space: nowrap; }
+  .sel { display: flex; flex-direction: column; align-items: flex-end; }
+  .sel strong { font-size: 16px; }
+  .sel span { font-size: 12px; }
 </style>

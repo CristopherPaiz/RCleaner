@@ -4,14 +4,18 @@
 //!
 //! ```ignore
 //! PathRuleModule::new(
-//!     ModuleMeta::new("dev.pip", "Caché de pip", Category::Dev),
-//!     |ctx| vec![Target::contents("cache", "pip", [ctx.env.local_app_data.join(r"pip\Cache")])],
+//!     ModuleMeta::new("dev.pip", Category::Dev),
+//!     |ctx| vec![Target::contents("cache", [ctx.env.local_app_data.join(r"pip\Cache")])],
 //! )
 //! ```
+//!
+//! Los textos van en `locales/*.json`: `module.dev.pip.name`, `.desc`,
+//! `.target.cache` (etiqueta) y opcionalmente `.detail.cache`.
 
 use crate::context::{ScanContext, path_within};
 use crate::error::{Error, Result};
 use crate::fsutil::{self, Stats};
+use crate::i18n;
 use crate::model::{Action, EntryFilter, Finding, Risk};
 use crate::module::{CleanerModule, ModuleMeta};
 use std::path::{Path, PathBuf};
@@ -28,7 +32,8 @@ pub enum TargetKind {
 #[derive(Debug, Clone)]
 pub struct Target {
     pub key: String,
-    pub label: String,
+    /// `None` = `module.<id>.target.<key>` de los locales.
+    pub label: Option<String>,
     pub kind: TargetKind,
     pub roots: Vec<PathBuf>,
     pub risk: Option<Risk>,
@@ -38,10 +43,10 @@ pub struct Target {
 }
 
 impl Target {
-    fn new(key: &str, label: &str, kind: TargetKind, roots: Vec<PathBuf>) -> Self {
+    fn new(key: &str, kind: TargetKind, roots: Vec<PathBuf>) -> Self {
         Self {
             key: key.to_owned(),
-            label: label.to_owned(),
+            label: None,
             kind,
             roots,
             risk: None,
@@ -52,18 +57,17 @@ impl Target {
     }
 
     /// Vaciar el contenido de estas carpetas.
-    pub fn contents(key: &str, label: &str, roots: impl IntoIterator<Item = PathBuf>) -> Self {
+    pub fn contents(key: &str, roots: impl IntoIterator<Item = PathBuf>) -> Self {
         Self::new(
             key,
-            label,
             TargetKind::Contents(EntryFilter::default()),
             roots.into_iter().collect(),
         )
     }
 
     /// Borrar estas rutas completas.
-    pub fn paths(key: &str, label: &str, paths: impl IntoIterator<Item = PathBuf>) -> Self {
-        Self::new(key, label, TargetKind::Paths, paths.into_iter().collect())
+    pub fn paths(key: &str, paths: impl IntoIterator<Item = PathBuf>) -> Self {
+        Self::new(key, TargetKind::Paths, paths.into_iter().collect())
     }
 
     fn filter_mut(&mut self) -> Option<&mut EntryFilter> {
@@ -103,6 +107,12 @@ impl Target {
 
     pub fn admin(mut self, required: bool) -> Self {
         self.requires_admin = Some(required);
+        self
+    }
+
+    /// Etiqueta propia (nombres de modelos, proyectos…) en vez de la de los locales.
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
         self
     }
 
@@ -166,8 +176,12 @@ impl Target {
             id: format!("{}:{}", meta.id, self.key),
             module_id: meta.id.clone(),
             category: meta.category,
-            label: self.label,
-            detail: self.detail,
+            label: self
+                .label
+                .unwrap_or_else(|| i18n::t(&format!("module.{}.target.{}", meta.id, self.key))),
+            detail: self
+                .detail
+                .or_else(|| i18n::get(&format!("module.{}.detail.{}", meta.id, self.key))),
             path: roots.into_iter().next(),
             bytes: stats.bytes,
             items: stats.items,

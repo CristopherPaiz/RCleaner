@@ -1,6 +1,6 @@
 [package]
-name = "clean-crp"
-description = "Clean-CRP: limpiador y mantenimiento modular para Windows"
+name = "rcleaner"
+description = "RCleaner: limpiador y mantenimiento modular para Windows"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,6 +12,7 @@ tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
 crp-core.workspace = true
+crp-disk.workspace = true
 crp-modules.workspace = true
 crp-platform.workspace = true
 serde.workspace = true

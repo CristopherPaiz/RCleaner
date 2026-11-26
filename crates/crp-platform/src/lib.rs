@@ -6,6 +6,8 @@
 
 pub mod drives;
 pub mod elevation;
+pub mod files;
+pub mod locale;
 pub mod processes;
 pub mod recycle_bin;
 

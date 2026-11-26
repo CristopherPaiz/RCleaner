@@ -1,6 +1,6 @@
-# Genera los instaladores de Clean-CRP:
-#   target\release\bundle\msi\Clean-CRP_<ver>_x64_es-ES.msi
-#   target\release\bundle\nsis\Clean-CRP_<ver>_x64-setup.exe
+# Genera los instaladores de RCleaner:
+#   target\release\bundle\msi\RCleaner_<ver>_x64_es-ES.msi
+#   target\release\bundle\nsis\RCleaner_<ver>_x64-setup.exe
 #
 # Uso:  .\scripts\build.ps1            (instala dependencias npm y compila)
 #       .\scripts\build.ps1 -SkipInstall

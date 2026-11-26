@@ -1,6 +1,6 @@
 //! # crp-core
 //!
-//! Núcleo de Clean-CRP. No sabe nada de rutas concretas de Windows ni de la UI:
+//! Núcleo de RCleaner. No sabe nada de rutas concretas de Windows ni de la UI:
 //! define el **modelo** (hallazgos, acciones, riesgos), el **contrato** de los
 //! módulos ([`CleanerModule`]), el **motor** que los ejecuta en paralelo
 //! ([`Engine`]) y las **guardas de seguridad** que impiden borrar rutas críticas.
@@ -18,6 +18,7 @@ pub mod env;
 pub mod error;
 pub mod exec;
 pub mod fsutil;
+pub mod i18n;
 pub mod model;
 pub mod modes;
 pub mod module;
@@ -30,6 +31,7 @@ pub use context::{CancelToken, ScanContext, path_within};
 pub use engine::{CleanOptions, Engine};
 pub use env::Env;
 pub use error::{Error, Result};
+pub use i18n::{t, tf, tn};
 pub use model::{
     Action, Category, CleanOutcome, CleanReport, EntryFilter, Finding, ModuleError, Risk,
     ScanReport,
