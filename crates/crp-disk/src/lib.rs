@@ -13,6 +13,8 @@
 //!
 //! Nada aquí borra por sí mismo: la eliminación va a la papelera
 //! (`crp_platform::recycle_bin::send`) y pasa por `crp_core::safety`.
+// Todo el código de sistema (`unsafe`/FFI) vive sólo en crp-platform.
+#![forbid(unsafe_code)]
 
 pub mod dupes;
 pub mod protect;

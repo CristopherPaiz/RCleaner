@@ -57,6 +57,14 @@ does `platform`; `modules` and `disk` use both; the CLI and the app use
    travel in `EntryFilter.exclude`, and the walk never enters them, either to
    measure or to delete. (Note: the walk is pre-order; walkdir with
    `contents_first` + `filter_entry` skips siblings.)
+10. Space/Duplicates go through `deletable()`: `check_target` always applies;
+    `protect::reason` (system files) and Program Files/Windows only lift when
+    the user turns on `allow_system`, and the UI asks for confirmation on every
+    such pick. Exclusions are never deletable.
+11. Every deletion is appended to `deleted.log` (JSON lines, trimmed past
+    4 MB) with source, path, size and whether it was permanent.
+12. `unsafe` is forbidden (`#![forbid(unsafe_code)]`) everywhere except
+    `crp-platform`, which wraps the Windows API.
 
 ## Space and duplicates (`crp-disk`)
 
@@ -126,16 +134,34 @@ app/src/
   lib/dupes.svelte.ts  duplicates: folders, options, auto-selection
   lib/sunburst.ts      geometry and colors of the radial map
   lib/selectors.ts     same selector logic as Rust (mode editor)
-  views/               Home, Clean, Space, Dupes, Settings
-  components/          Glyph, ActionButton, Dock, Modal, Sunburst, ResultList,
-                       ConfirmDialog, ModeEditor, Icon (inline SVG)
+  lib/nav.svelte.ts    view history (mouse back/forward, Alt+arrows)
+  lib/menu.svelte.ts   global right-click menu
+  lib/activity.svelte.ts  path being deleted and delete progress
+  views/               Home, Clean, Space, Dupes, Settings, About
+  components/          Glyph, ActionButton, Dock, Modal, Sunburst, Treemap,
+                       ResultList, ConfirmDialog, DeleteFlow, ContextMenu,
+                       Wizard, DeletionLog, ModeEditor, Icon (inline SVG)
 app/src-tauri/src/
   state.rs             engine, settings, last scan, disk tree, duplicates,
                        one cancellation token per task
-  commands.rs          info, modes, settings, scan/clean, cancel(task), reveal, admin
+  commands.rs          info, modes, settings, scan/clean, cancel(task), reveal, admin,
+                       deletion log, links
   space.rs             disk_* (scan, view, children, crumbs, largest, reveal, delete)
                        and dupes_* (scan, report, reveal, delete)
+  tray.rs              tray icon and menu; the window is destroyed on minimize
+  background.rs        periodic read-only scan + notification
 ```
+
+- **Tray and memory**: with "minimize to tray" on, minimizing *destroys* the
+  window (WebView2 and its processes exit), drops the disk/duplicate trees and
+  trims the working set. If a task is running (`AppState::busy()` guard) the
+  window is only hidden. `tray::show` recreates it from `tauri.conf.json`
+  (`"create": false`, so `main()` decides whether to show it).
+- `--background` (autostart) starts without a window; `--wait-pid` lets a
+  relaunch (e.g. as administrator) wait for the old instance to exit.
+  `tauri-plugin-single-instance` forwards a second launch to `tray::show`.
+- Deleting emits `crp://delete` (done/total/current) and `crp://now` (path
+  being removed, every 100 ms, from `CancelToken::current`).
 
 - Heavy work runs in `spawn_blocking`; progress through the events
   `crp://progress`, `crp://disk` (every 150 ms) and `crp://dupes`.

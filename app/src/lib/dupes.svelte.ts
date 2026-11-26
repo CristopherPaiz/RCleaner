@@ -28,6 +28,7 @@ class DupesStore {
 
   error = $state<string | null>(null);
   lastDelete = $state<DeleteResult | null>(null);
+  lastPermanent = $state(false);
 
   selectedBytes = $derived.by(() => {
     let total = 0;
@@ -93,13 +94,18 @@ class DupesStore {
     this.selected.add(id);
   }
 
-  async deleteSelected() {
+  /** Elimina lo marcado (papelera o permanente). `null` si falló. */
+  async deleteSelected(permanent: boolean): Promise<DeleteResult | null> {
     try {
-      this.lastDelete = await api.dupesDelete([...this.selected]);
+      const r = await api.dupesDelete([...this.selected], permanent);
+      this.lastDelete = r;
+      this.lastPermanent = permanent;
       this.report = await api.dupesReport();
       this.selected.clear();
+      return r;
     } catch (e) {
       this.error = String(e);
+      return null;
     }
   }
 

@@ -1,11 +1,14 @@
 //! Comandos del analizador de espacio y del buscador de duplicados.
 //!
 //! Igual que en la limpieza, la UI sólo envía **ids** de nodos/archivos del
-//! último análisis; las rutas las resuelve el backend. Todo lo que se elimina
-//! va a la papelera de reciclaje y pasa antes por las guardas de seguridad.
+//! último análisis; las rutas las resuelve el backend. Lo que se elimina va a
+//! la papelera o se borra para siempre (lo elige el usuario), pasa antes por
+//! las guardas de seguridad y queda en el registro de borrados.
 
+use crate::commands::{log_deletions, now_ticker};
 use crate::state::{AppState, lock};
-use crp_core::{Env, path_within, safety, t, tf};
+use crp_core::settings::unix_now;
+use crp_core::{CancelToken, DeletionRecord, Env, Settings, path_within, safety, t, tf};
 use crp_disk::dupes::{DupeOptions, DupeProgress, DupeReport, find};
 use crp_disk::protect;
 use crp_disk::tree::{
@@ -21,6 +24,9 @@ use tauri::{AppHandle, Emitter, State};
 
 const DISK_EVENT: &str = "crp://disk";
 const DUPES_EVENT: &str = "crp://dupes";
+const DELETE_EVENT: &str = "crp://delete";
+/// Elementos que se mandan juntos a la papelera (lotes = más rápido).
+const RECYCLE_CHUNK: usize = 16;
 
 type CmdResult<T> = Result<T, String>;
 
@@ -32,17 +38,31 @@ fn err(e: impl std::fmt::Display) -> String {
 pub struct DeleteResult {
     freed_bytes: u64,
     removed: usize,
+    /// Lo que se eliminó (para enseñarlo al terminar).
+    removed_paths: Vec<PathBuf>,
     errors: Vec<String>,
 }
 
-/// Archivos y carpetas de Windows (`crp_disk::protect`), `safety::check_target`
-/// y nada dentro de Windows, Program Files o ProgramData: eso se quita con el
-/// desinstalador, no a mano. `system` = tiene el atributo de sistema.
-fn deletable(path: &Path, system: bool, env: &Env) -> Result<(), String> {
+/// Qué se puede eliminar desde Espacio y Duplicados:
+///
+/// - Nunca lo que bloquea `safety::check_target` (raíces de unidad, la carpeta
+///   de Windows o el perfil enteros…) ni las exclusiones del usuario.
+/// - Archivos y carpetas de Windows (`crp_disk::protect`) y lo que hay en
+///   Windows, Program Files o ProgramData, sólo si el usuario activó
+///   "archivos de sistema" en Ajustes (y confirmó cada uno en la UI).
+///
+/// `system` = tiene el atributo de sistema.
+fn deletable(path: &Path, system: bool, env: &Env, settings: &Settings) -> Result<(), String> {
+    safety::check_target(path, env).map_err(err)?;
+    if settings.exclusions.iter().any(|e| path_within(path, e)) {
+        return Err(tf("app.excluded_path", &[("path", &path.display())]));
+    }
+    if settings.allow_system {
+        return Ok(());
+    }
     if let Some(why) = protect::reason(path, system, env) {
         return Err(format!("{}: {why}", path.display()));
     }
-    safety::check_target(path, env).map_err(err)?;
     let system = [
         &env.windows_dir,
         &env.program_files,
@@ -58,6 +78,66 @@ fn deletable(path: &Path, system: bool, env: &Env) -> Result<(), String> {
 fn is_system(md: &std::fs::Metadata) -> bool {
     use std::os::windows::fs::MetadataExt;
     md.file_attributes() & protect::SYSTEM_ATTRIBUTE != 0
+}
+
+#[derive(Serialize, Clone)]
+struct DeleteProgress {
+    done: usize,
+    total: usize,
+    current: Option<PathBuf>,
+}
+
+/// Elimina `paths` (papelera o definitivo) emitiendo el progreso. Devuelve,
+/// por ruta, los bytes liberados que se conocen (sólo en borrado definitivo)
+/// o el error. Se detiene si se cancela `token`.
+fn delete_all(
+    app: &AppHandle,
+    paths: Vec<PathBuf>,
+    permanent: bool,
+    token: &CancelToken,
+) -> Vec<(PathBuf, Result<u64, String>)> {
+    let total = paths.len();
+    let emit = |done: usize, current: Option<&PathBuf>| {
+        let _ = app.emit(
+            DELETE_EVENT,
+            DeleteProgress {
+                done,
+                total,
+                current: current.cloned(),
+            },
+        );
+    };
+    let mut out = Vec::with_capacity(total);
+    if permanent {
+        for (i, path) in paths.into_iter().enumerate() {
+            if token.is_cancelled() {
+                break;
+            }
+            emit(i, Some(&path));
+            let stats = crp_core::fsutil::delete_path(&path, token);
+            let r = if path.exists() {
+                Err(stats
+                    .errors
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| tf("app.not_removed", &[("path", &path.display())])))
+            } else {
+                Ok(stats.freed)
+            };
+            out.push((path, r));
+        }
+    } else {
+        for chunk in paths.chunks(RECYCLE_CHUNK) {
+            if token.is_cancelled() {
+                break;
+            }
+            emit(out.len(), chunk.first());
+            token.set_current(&chunk[0]);
+            out.extend(recycle(chunk).into_iter().map(|(p, r)| (p, r.map(|()| 0))));
+        }
+    }
+    emit(out.len(), None);
+    out
 }
 
 /// Manda a la papelera; si el lote falla, reintenta de uno en uno para saber cuáles.
@@ -119,10 +199,11 @@ pub async fn disk_scan(
     if !path.is_absolute() {
         return Err(t("app.bad_path"));
     }
+    let _busy = state.busy();
     let cancel = AppState::fresh_token(&state.disk_cancel);
-    let opts = ScanOptions {
-        exclusions: lock(&state.settings).exclusions.clone(),
-    };
+    // Las exclusiones sí se recorren (cuentan en el espacio): se marcan en la
+    // lista y no se pueden eliminar.
+    let opts = ScanOptions::default();
     let progress = Arc::new(ScanProgress::default());
     let running = Arc::new(AtomicBool::new(true));
     ticker(app, progress.clone(), running.clone());
@@ -161,12 +242,51 @@ pub fn disk_treemap(state: State<'_, AppState>, id: NodeId) -> Option<Treemap> {
         .and_then(|t| t.treemap(id, 50_000, 1.0 / 400_000.0))
 }
 
+/// `true` si `path` está en las exclusiones del usuario.
+fn excluded(state: &AppState, path: &Path) -> bool {
+    lock(&state.settings)
+        .exclusions
+        .iter()
+        .any(|e| path_within(path, e))
+}
+
 #[tauri::command]
 pub fn disk_children(state: State<'_, AppState>, id: NodeId) -> Vec<Entry> {
-    lock(&state.disk)
-        .as_ref()
-        .map(|t| t.children(id, 500))
-        .unwrap_or_default()
+    let guard = lock(&state.disk);
+    let Some(tree) = guard.as_ref() else {
+        return Vec::new();
+    };
+    let mut entries = tree.children(id, 500);
+    if !lock(&state.settings).exclusions.is_empty() {
+        for e in &mut entries {
+            e.excluded = tree.path(e.id).is_some_and(|p| excluded(&state, &p));
+        }
+    }
+    entries
+}
+
+/// Un nodo cualquiera (clic derecho en los gráficos).
+#[tauri::command]
+pub fn disk_entry(state: State<'_, AppState>, id: NodeId) -> Option<Entry> {
+    let guard = lock(&state.disk);
+    let tree = guard.as_ref()?;
+    let n = tree.node(id)?;
+    Some(Entry {
+        id,
+        name: n.name.to_string(),
+        size: n.size,
+        items: n.items,
+        kind: n.kind,
+        modified: n.modified,
+        protected: tree.protection(id),
+        excluded: tree.path(id).is_some_and(|p| excluded(&state, &p)),
+    })
+}
+
+/// Ruta completa de un nodo (para copiarla o añadirla a exclusiones).
+#[tauri::command]
+pub fn disk_path(state: State<'_, AppState>, id: NodeId) -> Option<PathBuf> {
+    lock(&state.disk).as_ref().and_then(|t| t.path(id))
 }
 
 #[tauri::command]
@@ -179,10 +299,14 @@ pub fn disk_crumbs(state: State<'_, AppState>, id: NodeId) -> Vec<Crumb> {
 
 #[tauri::command]
 pub fn disk_largest(state: State<'_, AppState>, id: NodeId) -> Vec<FileEntry> {
-    lock(&state.disk)
+    let mut files = lock(&state.disk)
         .as_ref()
         .map(|t| t.largest_files(id, 200))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    for f in &mut files {
+        f.excluded = excluded(&state, &f.path);
+    }
+    files
 }
 
 #[tauri::command]
@@ -195,8 +319,14 @@ pub fn disk_reveal(state: State<'_, AppState>, id: NodeId) -> CmdResult<()> {
 }
 
 #[tauri::command]
-pub async fn disk_delete(state: State<'_, AppState>, ids: Vec<NodeId>) -> CmdResult<DeleteResult> {
+pub async fn disk_delete(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    ids: Vec<NodeId>,
+    permanent: bool,
+) -> CmdResult<DeleteResult> {
     let env = Env::from_system();
+    let settings = lock(&state.settings).clone();
     let mut result = DeleteResult::default();
     let mut targets: Vec<(NodeId, PathBuf)> = Vec::new();
     {
@@ -208,7 +338,7 @@ pub async fn disk_delete(state: State<'_, AppState>, ids: Vec<NodeId>) -> CmdRes
                 continue;
             };
             let system = tree.node(id).is_some_and(|n| n.system);
-            match deletable(&path, system, &env) {
+            match deletable(&path, system, &env, &settings) {
                 Ok(()) => targets.push((id, path)),
                 Err(e) => result.errors.push(e),
             }
@@ -219,24 +349,46 @@ pub async fn disk_delete(state: State<'_, AppState>, ids: Vec<NodeId>) -> CmdRes
     targets.retain(|(_, p)| !all.iter().any(|o| o != p && path_within(p, o)));
 
     let paths: Vec<PathBuf> = targets.iter().map(|(_, p)| p.clone()).collect();
-    let outcomes = tauri::async_runtime::spawn_blocking(move || recycle(&paths))
-        .await
-        .map_err(err)?;
+    let _busy = state.busy();
+    let token = AppState::fresh_token(&state.delete_cancel);
+    let ticker = now_ticker(app.clone(), token.clone());
+    let outcomes =
+        tauri::async_runtime::spawn_blocking(move || delete_all(&app, paths, permanent, &token))
+            .await;
+    ticker.store(false, Ordering::Relaxed);
+    let outcomes = outcomes.map_err(err)?;
 
-    let mut guard = lock(&state.disk);
-    let tree = guard.as_mut().ok_or_else(|| t("app.analysis_dropped"))?;
-    for ((id, _), (path, r)) in targets.into_iter().zip(outcomes) {
-        match r {
-            Ok(()) if !path.exists() => {
-                result.freed_bytes += tree.remove(id).unwrap_or(0);
-                result.removed += 1;
+    let now = unix_now();
+    let mut records = Vec::new();
+    {
+        let mut guard = lock(&state.disk);
+        let tree = guard.as_mut().ok_or_else(|| t("app.analysis_dropped"))?;
+        for ((id, _), (path, r)) in targets.into_iter().zip(outcomes) {
+            match r {
+                Ok(_) if !path.exists() => {
+                    let bytes = tree.remove(id).unwrap_or(0);
+                    result.freed_bytes += bytes;
+                    result.removed += 1;
+                    result.removed_paths.push(path.clone());
+                    records.push(DeletionRecord {
+                        timestamp: now,
+                        source: "space".into(),
+                        path,
+                        bytes,
+                        permanent,
+                    });
+                }
+                Ok(freed) => {
+                    result.freed_bytes += freed;
+                    result
+                        .errors
+                        .push(tf("app.not_removed", &[("path", &path.display())]));
+                }
+                Err(e) => result.errors.push(e),
             }
-            Ok(()) => result
-                .errors
-                .push(format!("{}: no se pudo mover", path.display())),
-            Err(e) => result.errors.push(e),
         }
     }
+    log_deletions(&state, &records);
     Ok(result)
 }
 
@@ -263,6 +415,7 @@ pub async fn dupes_scan(
     if include_system {
         opts.skip_dirs.clear();
     }
+    let _busy = state.busy();
     let cancel = AppState::fresh_token(&state.dupes_cancel);
     let report = tauri::async_runtime::spawn_blocking(move || {
         let progress = move |p: DupeProgress| {
@@ -279,6 +432,14 @@ pub async fn dupes_scan(
     Ok(report)
 }
 
+/// Ruta completa de un archivo de Duplicados.
+#[tauri::command]
+pub fn dupes_path(state: State<'_, AppState>, id: u32) -> Option<PathBuf> {
+    lock(&state.dupes)
+        .as_ref()
+        .and_then(|r| r.find(id).map(|(_, f)| f.path.clone()))
+}
+
 #[tauri::command]
 pub fn dupes_reveal(state: State<'_, AppState>, id: u32) -> CmdResult<()> {
     let path = lock(&state.dupes)
@@ -289,8 +450,14 @@ pub fn dupes_reveal(state: State<'_, AppState>, id: u32) -> CmdResult<()> {
 }
 
 #[tauri::command]
-pub async fn dupes_delete(state: State<'_, AppState>, ids: Vec<u32>) -> CmdResult<DeleteResult> {
+pub async fn dupes_delete(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    ids: Vec<u32>,
+    permanent: bool,
+) -> CmdResult<DeleteResult> {
     let env = Env::from_system();
+    let settings = lock(&state.settings).clone();
     let wanted: HashSet<u32> = ids.into_iter().collect();
     let mut result = DeleteResult::default();
     let mut targets: Vec<(u32, PathBuf, u64)> = Vec::new();
@@ -303,7 +470,7 @@ pub async fn dupes_delete(state: State<'_, AppState>, ids: Vec<u32>) -> CmdResul
             let (g, f) = rep.find(id).ok_or_else(|| t("app.file_gone"))?;
             *per_group.entry(g).or_default() += 1;
             let system = std::fs::symlink_metadata(&f.path).is_ok_and(|m| is_system(&m));
-            match deletable(&f.path, system, &env) {
+            match deletable(&f.path, system, &env, &settings) {
                 Ok(()) => targets.push((id, f.path.clone(), rep.groups[g].size)),
                 Err(e) => result.errors.push(e),
             }
@@ -317,27 +484,41 @@ pub async fn dupes_delete(state: State<'_, AppState>, ids: Vec<u32>) -> CmdResul
     }
 
     let paths: Vec<PathBuf> = targets.iter().map(|(_, p, _)| p.clone()).collect();
-    let outcomes = tauri::async_runtime::spawn_blocking(move || recycle(&paths))
-        .await
-        .map_err(err)?;
+    let _busy = state.busy();
+    let token = AppState::fresh_token(&state.delete_cancel);
+    let outcomes =
+        tauri::async_runtime::spawn_blocking(move || delete_all(&app, paths, permanent, &token))
+            .await
+            .map_err(err)?;
 
+    let now = unix_now();
+    let mut records = Vec::new();
     let mut removed = HashSet::new();
     for ((id, _, size), (path, r)) in targets.into_iter().zip(outcomes) {
         match r {
-            Ok(()) if !path.exists() => {
+            Ok(_) if !path.exists() => {
                 removed.insert(id);
                 result.freed_bytes += size;
                 result.removed += 1;
+                result.removed_paths.push(path.clone());
+                records.push(DeletionRecord {
+                    timestamp: now,
+                    source: "dupes".into(),
+                    path,
+                    bytes: size,
+                    permanent,
+                });
             }
-            Ok(()) => result
+            Ok(_) => result
                 .errors
-                .push(format!("{}: no se pudo mover", path.display())),
+                .push(tf("app.not_removed", &[("path", &path.display())])),
             Err(e) => result.errors.push(e),
         }
     }
     if let Some(rep) = lock(&state.dupes).as_mut() {
         rep.forget(&removed);
     }
+    log_deletions(&state, &records);
     Ok(result)
 }
 

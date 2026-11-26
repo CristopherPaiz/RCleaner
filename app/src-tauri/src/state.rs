@@ -1,6 +1,8 @@
 use crp_core::{AppPaths, CancelToken, Engine, Finding, ScanContext, Settings};
 use crp_disk::dupes::DupeReport;
 use crp_disk::tree::DiskTree;
+use serde::Serialize;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
 /// Aplica el idioma elegido (o el del sistema) a los textos del motor.
@@ -30,6 +32,34 @@ pub struct AppState {
     /// Última búsqueda de duplicados.
     pub dupes: Mutex<Option<DupeReport>>,
     pub dupes_cancel: Mutex<CancelToken>,
+    /// Borrado en curso desde Espacio o Duplicados.
+    pub delete_cancel: Mutex<CancelToken>,
+    /// La ventana se está cerrando para quedarse en la bandeja (no salir).
+    pub to_tray: AtomicBool,
+    /// Último análisis en segundo plano.
+    pub background: Mutex<Option<BackgroundStatus>>,
+    /// Tareas largas en curso (análisis, limpieza, borrado). Mientras haya
+    /// alguna, minimizar sólo oculta la ventana: no se destruye.
+    pub busy: AtomicUsize,
+}
+
+/// Marca una tarea larga mientras vive.
+pub struct Busy<'a>(&'a AtomicUsize);
+
+impl Drop for Busy<'_> {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// Resultado del último análisis en segundo plano.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct BackgroundStatus {
+    /// Segundos desde 1970 (UTC).
+    pub timestamp: u64,
+    /// Lo que se puede limpiar sin riesgo con el modo por defecto.
+    pub bytes: u64,
+    pub findings: usize,
 }
 
 impl AppState {
@@ -48,6 +78,10 @@ impl AppState {
             disk_cancel: Mutex::new(CancelToken::new()),
             dupes: Mutex::new(None),
             dupes_cancel: Mutex::new(CancelToken::new()),
+            delete_cancel: Mutex::new(CancelToken::new()),
+            to_tray: AtomicBool::new(false),
+            background: Mutex::new(None),
+            busy: AtomicUsize::new(0),
         }
     }
 
@@ -56,6 +90,37 @@ impl AppState {
         let ctx = crp_modules::system_context().with_settings(&lock(&self.settings));
         *lock(&self.cancel) = ctx.cancel.clone();
         ctx
+    }
+
+    /// Cuenta una tarea larga hasta que se suelte el valor devuelto.
+    pub fn busy(&self) -> Busy<'_> {
+        self.busy.fetch_add(1, Ordering::SeqCst);
+        Busy(&self.busy)
+    }
+
+    pub fn is_busy(&self) -> bool {
+        self.busy.load(Ordering::SeqCst) > 0
+    }
+
+    /// Libera los análisis grandes (árbol de disco y duplicados) al quedarse
+    /// en la bandeja: al volver se analiza de nuevo.
+    pub fn drop_heavy(&self) {
+        *lock(&self.disk) = None;
+        *lock(&self.dupes) = None;
+        lock(&self.last_scan).shrink_to_fit();
+    }
+
+    /// Selectores del modo por defecto (o "rápido").
+    pub fn default_selectors(&self) -> Vec<String> {
+        let wanted = lock(&self.settings).default_mode.clone();
+        let (modes, _) = crp_core::modes::all(&self.paths.modes_dir());
+        modes
+            .iter()
+            .find(|m| Some(&m.id) == wanted.as_ref())
+            .or_else(|| modes.iter().find(|m| m.id == "rapido"))
+            .or(modes.first())
+            .map(|m| m.modules.clone())
+            .unwrap_or_default()
     }
 
     /// Token nuevo para una tarea; el anterior queda cancelable desde `cancel`.

@@ -14,6 +14,12 @@
   import Space from "./views/Space.svelte";
   import Dupes from "./views/Dupes.svelte";
   import SettingsView from "./views/Settings.svelte";
+  import About from "./views/About.svelte";
+  import ContextMenu from "./components/ContextMenu.svelte";
+  import Wizard from "./components/Wizard.svelte";
+  import { menu, textMenu } from "./lib/menu.svelte";
+  import { nav } from "./lib/nav.svelte";
+  import { activity } from "./lib/activity.svelte";
 
   let elevating = $state(false);
 
@@ -22,10 +28,49 @@
       api.onProgress((e) => app.onProgress(e)),
       api.onDiskProgress((p) => (space.progress = p)),
       api.onDupesProgress((p) => (dupes.progress = p)),
+      api.onNow((p) => (activity.now = p)),
+      api.onDelete((p) => activity.onDelete(p)),
     ];
     void app.load();
     return () => subs.forEach((s) => void s.then((u) => u()));
   });
+
+  // Pantalla de carga (index.html): se va al tener los datos.
+  $effect(() => {
+    if (!app.loaded) return;
+    const splash = document.getElementById("splash");
+    if (!splash) return;
+    splash.classList.add("gone");
+    setTimeout(() => splash.remove(), 300);
+  });
+
+  // Historial para Atrás/Adelante.
+  $effect(() => {
+    nav.record({ view: app.view, node: app.view === "space" && space.phase === "results" ? space.node : undefined });
+  });
+
+  /** Sin el menú de WebView2: campos de texto con el suyo; lo demás, el de cada zona. */
+  function contextMenu(e: MouseEvent) {
+    if (e.defaultPrevented) return;
+    e.preventDefault();
+    const el = e.target as HTMLElement | null;
+    if (el instanceof HTMLInputElement && !["checkbox", "radio", "range"].includes(el.type)) menu.show(e, textMenu(el, t));
+    else if (el instanceof HTMLTextAreaElement) menu.show(e, textMenu(el, t));
+  }
+
+  /** Botones laterales del ratón (3 = atrás, 4 = adelante). */
+  function mouseNav(e: MouseEvent) {
+    if (e.button !== 3 && e.button !== 4) return;
+    e.preventDefault();
+    if (e.type === "mouseup") void nav.go(e.button === 3 ? -1 : 1);
+  }
+
+  function keys(e: KeyboardEvent) {
+    if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      e.preventDefault();
+      void nav.go(e.key === "ArrowLeft" ? -1 : 1);
+    }
+  }
 
   const NAV: { view: View; label: string; icon: string }[] = [
     { view: "home", label: "ui.nav.home", icon: "home" },
@@ -56,6 +101,8 @@
     }
   }
 </script>
+
+<svelte:window oncontextmenu={contextMenu} onmousedown={mouseNav} onmouseup={mouseNav} onkeydown={keys} />
 
 <div class="shell" data-section={app.view} style:--a={tint?.[0]} style:--b={tint?.[1]}>
   <nav class="rail" aria-label={t("ui.nav.aria")} data-tauri-drag-region>
@@ -93,6 +140,15 @@
     {/if}
 
     <button
+      class="item small"
+      class:on={app.view === "about"}
+      data-section="about"
+      title={t("ui.about.title")}
+      onclick={() => (app.view = "about")}
+    >
+      <span class="ic"><Icon name="info" size={18} /></span>
+    </button>
+    <button
       class="item"
       class:on={app.view === "settings"}
       data-section="settings"
@@ -123,6 +179,8 @@
           <Space />
         {:else if app.view === "dupes"}
           <Dupes />
+        {:else if app.view === "about"}
+          <About />
         {:else}
           <SettingsView />
         {/if}
@@ -131,8 +189,15 @@
   </main>
 </div>
 
+{#if app.loaded && !app.settings.onboarded}
+  <Wizard />
+{/if}
+
+<ContextMenu />
+
 <style>
   .shell { display: grid; grid-template-columns: 84px 1fr; height: 100vh; }
+  .rail { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
 
   .rail {
     background: var(--bg-rail); border-right: 1px solid var(--line);
@@ -149,6 +214,8 @@
     transition: background 0.15s, color 0.15s, box-shadow 0.2s;
   }
   .lbl { font-size: 11px; font-weight: 500; letter-spacing: 0.01em; }
+  .item.small { padding: 2px 0; }
+  .item.small .ic { width: 34px; height: 34px; border-radius: 10px; }
   .item:hover .ic { background: var(--hover); color: var(--text); }
   .item:hover { color: var(--text-2); }
   .item.on { color: var(--text); }

@@ -11,6 +11,8 @@
 //! 2. La UI/CLI elige un [`Mode`] (lista de selectores de módulos).
 //! 3. [`Engine::scan`] devuelve un [`ScanReport`] con [`Finding`]s (nada se borra).
 //! 4. El usuario confirma y [`Engine::clean`] ejecuta las [`Action`]s elegidas.
+// Todo el código de sistema (`unsafe`/FFI) vive sólo en crp-platform.
+#![forbid(unsafe_code)]
 
 pub mod context;
 pub mod engine;
@@ -40,4 +42,4 @@ pub use modes::Mode;
 pub use module::{CleanerModule, ModuleMeta};
 pub use progress::{NoProgress, ProgressEvent, ProgressSink};
 pub use rules::{PathRuleModule, Target};
-pub use settings::{AppPaths, HistoryEntry, Settings};
+pub use settings::{AppPaths, Background, DeletionRecord, HistoryEntry, Settings};

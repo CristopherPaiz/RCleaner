@@ -9,6 +9,8 @@
 //! rcl space C:\ --top 20          # qué ocupa espacio
 //! rcl dupes D:\Fotos              # archivos duplicados (no borra)
 //! ```
+// Todo el código de sistema (`unsafe`/FFI) vive sólo en crp-platform.
+#![forbid(unsafe_code)]
 
 use anyhow::{Result, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};

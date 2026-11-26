@@ -14,8 +14,10 @@
     onup: () => void;
     /** Id resaltado desde la lista. */
     highlight?: number | null;
+    /** Clic derecho sobre un archivo o carpeta. */
+    onmenu?: (e: MouseEvent, id: number) => void;
   }
-  let { view, rings, canUp, onopen, onup, highlight = null }: Props = $props();
+  let { view, rings, canUp, onopen, onup, highlight = null, onmenu }: Props = $props();
 
   const geo = $derived(layout(view, rings));
   let hover = $state<Arc | null>(null);
@@ -50,6 +52,10 @@
             onmouseenter={() => (hover = a)}
             onmouseleave={() => (hover = null)}
             onclick={() => click(a)}
+            oncontextmenu={(e) => {
+              e.preventDefault();
+              if (a.id !== null && a.kind !== "rest") onmenu?.(e, a.id);
+            }}
           />
         {/each}
       </g>
@@ -71,7 +77,7 @@
 </div>
 
 <style>
-  .wrap { position: relative; width: 100%; aspect-ratio: 1; max-width: 520px; max-height: 100%; margin: 0 auto; }
+  .wrap { position: relative; width: min(100cqw, 100cqh, 520px); aspect-ratio: 1; margin: 0 auto; }
   svg { width: 100%; height: 100%; display: block; overflow: visible; }
   .rings { animation: grow 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: 0 0; }
   @keyframes grow { from { transform: scale(0.86) rotate(-8deg); opacity: 0; } }

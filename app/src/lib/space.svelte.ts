@@ -35,6 +35,8 @@ export interface Pick {
   id: number;
   name: string;
   size: number;
+  /** Archivo de Windows protegido (elegido bajo responsabilidad del usuario). */
+  system?: boolean;
 }
 
 class SpaceStore {
@@ -59,6 +61,7 @@ class SpaceStore {
 
   error = $state<string | null>(null);
   lastDelete = $state<DeleteResult | null>(null);
+  lastPermanent = $state(false);
 
   /** Recupera un análisis previo (al volver a la vista). */
   async restore() {
@@ -139,18 +142,28 @@ class SpaceStore {
     else this.picks.set(p.id, p);
   }
 
-  async deletePicks() {
+  /** Elimina lo marcado (papelera o permanente). `null` si falló. */
+  async deletePicks(permanent: boolean): Promise<DeleteResult | null> {
     const ids = [...this.picks.keys()];
     try {
-      this.lastDelete = await api.diskDelete(ids);
+      const r = await api.diskDelete(ids, permanent);
+      this.lastDelete = r;
+      this.lastPermanent = permanent;
       this.picks.clear();
       this.summary = await api.diskSummary();
       // El nodo actual pudo desaparecer: si no hay vista, volver a la raíz.
       const view = await api.diskView(this.node, RINGS);
       await this.open(view ? this.node : (this.summary?.root ?? 0));
+      return r;
     } catch (e) {
       this.error = String(e);
+      return null;
     }
+  }
+
+  /** Vuelve a pedir la carpeta actual (p. ej. tras cambiar exclusiones). */
+  async refresh() {
+    if (this.phase === "results") await this.open(this.node);
   }
 
   reset() {

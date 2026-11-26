@@ -15,7 +15,7 @@ import {
 } from "./api";
 import { i18n, resolveLang } from "./i18n.svelte";
 
-export type View = "home" | "clean" | "space" | "dupes" | "settings";
+export type View = "home" | "clean" | "space" | "dupes" | "settings" | "about";
 export type Phase = "idle" | "scanning" | "results" | "cleaning" | "done";
 
 class AppStore {
@@ -24,7 +24,23 @@ class AppStore {
   modes = $state<Mode[]>([]);
   modeErrors = $state<string[]>([]);
   modules = $state<ModuleMeta[]>([]);
-  settings = $state<Settings>({ dev_roots: [], exclusions: [], default_mode: null, language: null, theme: null });
+  settings = $state<Settings>({
+    dev_roots: [],
+    exclusions: [],
+    default_mode: null,
+    language: null,
+    theme: null,
+    always_admin: false,
+    tray: true,
+    autostart: false,
+    background: { enabled: false, every_hours: 6, threshold_mb: 1024 },
+    allow_system: false,
+    onboarded: true,
+  });
+  /** Datos iniciales cargados (para ocultar la pantalla de carga). */
+  loaded = $state(false);
+  /** Ya se hizo el análisis rápido del Resumen en esta sesión. */
+  estimated = false;
 
   // ── Navegación ───────────────────────────────────────────────────────
   view = $state<View>("home");
@@ -59,6 +75,34 @@ class AppStore {
         this.modes.find((m) => m.id === "rapido") ??
         this.modes[0] ??
         null;
+    } catch (e) {
+      this.error = String(e);
+    } finally {
+      this.loaded = true;
+    }
+  }
+
+  /** Exclusión que contiene `path` (o `undefined`). */
+  exclusionFor(path: string): string | undefined {
+    const p = path.toLowerCase().replace(/\\+$/, "");
+    return this.settings.exclusions.find((e) => {
+      const x = e.toLowerCase().replace(/\\+$/, "");
+      return p === x || p.startsWith(`${x}\\`);
+    });
+  }
+
+  async addExclusion(path: string) {
+    if (this.exclusionFor(path)) return;
+    try {
+      await this.saveSettings({ ...this.settings, exclusions: [...this.settings.exclusions, path] });
+    } catch (e) {
+      this.error = String(e);
+    }
+  }
+
+  async removeExclusion(path: string) {
+    try {
+      await this.saveSettings({ ...this.settings, exclusions: this.settings.exclusions.filter((e) => e !== path) });
     } catch (e) {
       this.error = String(e);
     }

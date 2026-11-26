@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app } from "../lib/app.svelte";
   import { api, type Finding } from "../lib/api";
-  import { formatBytes, formatCount, modeColors, splitBytes } from "../lib/format";
+  import { formatBytes, formatCount, modeColors, splitBytes, splitPath } from "../lib/format";
   import ResultList from "../components/ResultList.svelte";
   import ConfirmDialog from "../components/ConfirmDialog.svelte";
   import Glyph from "../components/Glyph.svelte";
@@ -12,6 +12,8 @@
   import { fade } from "svelte/transition";
   import { morph } from "../lib/motion";
   import { i18n, t, tn } from "../lib/i18n.svelte";
+  import { activity } from "../lib/activity.svelte";
+  import ExpandList from "../components/ExpandList.svelte";
 
   let confirming = $state(false);
   let query = $state("");
@@ -32,6 +34,12 @@
     (app.cleanReport?.outcomes ?? [])
       .filter((o) => o.errors.length > 0)
       .map((o) => ({ label: findings.find((f) => f.id === o.finding_id)?.label ?? o.finding_id, errors: o.errors })),
+  );
+  const cleaned = $derived(
+    (app.cleanReport?.outcomes ?? [])
+      .filter((o) => o.freed_bytes > 0 || o.removed_items > 0)
+      .map((o) => ({ o, f: findings.find((f) => f.id === o.finding_id) }))
+      .sort((a, b) => b.o.freed_bytes - a.o.freed_bytes),
   );
   const big = $derived(splitBytes(chosenBytes));
   const freedParts = $derived(splitBytes(freed));
@@ -141,6 +149,16 @@
     {#if skipped > 0}
       <p class="faint small">{tn("ui.clean.skipped", skipped)}</p>
     {/if}
+    {#if cleaned.length > 0}
+      <div class="cleaned">
+        <ExpandList items={cleaned} limit={5}>
+          {#snippet row(c)}
+            <span class="ellipsis" title={c.f?.path ?? ""}>{c.f?.label ?? c.o.finding_id}</span>
+            <span class="num faint">{formatBytes(c.o.freed_bytes)}</span>
+          {/snippet}
+        </ExpandList>
+      </div>
+    {/if}
     {#if problems.length > 0}
       <details class="problems">
         <summary>{tn("ui.clean.problems", problems.length)}</summary>
@@ -193,6 +211,10 @@
     <div class="cleaning">
       <div class="meter wide"><div style:width="{percent}%"></div></div>
       <span class="faint num">{t("ui.clean.cleaning", { done: app.progress.done, total: app.progress.total })}</span>
+      {#if activity.now}
+        {@const [dir, name] = splitPath(activity.now)}
+        <span class="now mono" title={activity.now}><span class="faint">{dir}\</span>{name}</span>
+      {/if}
     </div>
   {/if}
 
@@ -274,6 +296,9 @@
   .hint { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--warn); }
   .cleaning { display: flex; align-items: center; gap: 14px; padding: 6px 32px 10px; font-size: 12px; }
   .cleaning span { white-space: nowrap; }
+  .cleaning .meter.wide { width: 200px; flex-shrink: 0; }
+  .cleaning .now { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .cleaned { width: min(520px, 100%); margin-top: 10px; text-align: left; display: flex; flex-direction: column; }
   .sel { display: flex; flex-direction: column; align-items: flex-end; }
   .sel strong { font-size: 16px; }
   .sel span { font-size: 12px; }

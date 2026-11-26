@@ -15,8 +15,10 @@
     onopen: (id: number) => void;
     /** Id resaltado desde la lista. */
     highlight?: number | null;
+    /** Clic derecho sobre un archivo o carpeta. */
+    onmenu?: (e: MouseEvent, id: number) => void;
   }
-  let { data, ranks, onopen, highlight = null }: Props = $props();
+  let { data, ranks, onopen, highlight = null, onmenu }: Props = $props();
 
   let box: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -94,6 +96,13 @@
     if (tp > 0 && data.kind[tp] === "dir") onopen(data.id[tp]);
   }
 
+  function context(e: MouseEvent) {
+    e.preventDefault();
+    if (!hover || !onmenu) return;
+    const i = hover.i;
+    if (i > 0 && data.kind[i] !== "rest") onmenu(e, data.id[i]);
+  }
+
   const highlighted = $derived(highlight === null ? -1 : data.id.indexOf(highlight));
   const hoverBox = $derived(hover ? box_of(hover.i) : null);
   const groupBox = $derived(hover && top(hover.i) !== hover.i ? box_of(top(hover.i)) : null);
@@ -122,6 +131,7 @@
     onmousemove={move}
     onmouseleave={() => (hover = null)}
     onclick={click}
+    oncontextmenu={context}
     aria-label={t("ui.sunburst.aria", { name: data.name[0] })}
   ></canvas>
   {#if listBox}

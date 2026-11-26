@@ -86,6 +86,34 @@ export interface Settings {
   language: string | null;
   /** `null` = tema del sistema. */
   theme: "light" | "dark" | null;
+  always_admin: boolean;
+  /** Minimizar a la bandeja del sistema. */
+  tray: boolean;
+  autostart: boolean;
+  background: { enabled: boolean; every_hours: number; threshold_mb: number };
+  /** Permitir elegir archivos de Windows protegidos (con aviso en cada uno). */
+  allow_system: boolean;
+  onboarded: boolean;
+}
+
+export interface DeletionRecord {
+  timestamp: number;
+  source: "clean" | "space" | "dupes";
+  path: string;
+  bytes: number;
+  permanent: boolean;
+}
+
+export interface BackgroundStatus {
+  timestamp: number;
+  bytes: number;
+  findings: number;
+}
+
+export interface DeleteProgress {
+  done: number;
+  total: number;
+  current: string | null;
 }
 
 export interface Drive {
@@ -156,6 +184,8 @@ export interface DiskEntry {
   modified: number;
   /** Por qué no se puede eliminar (archivo de Windows, carpeta base…). */
   protected: string | null;
+  /** Está en las exclusiones del usuario. */
+  excluded: boolean;
 }
 
 export interface DiskFile {
@@ -165,6 +195,7 @@ export interface DiskFile {
   size: number;
   modified: number;
   protected: string | null;
+  excluded: boolean;
 }
 
 export interface Crumb {
@@ -182,6 +213,7 @@ export interface DiskProgress {
 export interface DeleteResult {
   freed_bytes: number;
   removed: number;
+  removed_paths: string[];
   errors: string[];
 }
 
@@ -211,12 +243,25 @@ export type DupeProgress =
   | { phase: "listing"; files: number }
   | { phase: "hashing"; done: number; total: number };
 
-export type Task = "clean" | "disk" | "dupes";
+export type Task = "clean" | "disk" | "dupes" | "delete";
+
+export type Link = "repo" | "issues" | "new_issue" | "releases" | "license" | "contributors" | "changelog" | `user:${string}`;
 
 export const api = {
   systemInfo: () => invoke<SystemInfo>("system_info"),
   drives: () => invoke<Drive[]>("drives"),
   history: () => invoke<HistoryEntry[]>("history"),
+  deletions: (limit?: number) => invoke<DeletionRecord[]>("deletions", { limit }),
+  backgroundStatus: () => invoke<BackgroundStatus | null>("background_status"),
+  recycleBin: () => invoke<{ bytes: number; items: number } | null>("recycle_bin"),
+  openLink: (target: Link) => invoke<void>("open_link", { target }),
+  toTray: () => invoke<void>("to_tray"),
+  findingPath: (id: string) => invoke<string | null>("finding_path", { id }),
+  /** Ruta que se está eliminando (o `null` al terminar). */
+  onNow: (cb: (path: string | null) => void): Promise<UnlistenFn> =>
+    listen<{ path: string | null }>("crp://now", (e) => cb(e.payload.path)),
+  onDelete: (cb: (p: DeleteProgress) => void): Promise<UnlistenFn> =>
+    listen<DeleteProgress>("crp://delete", (e) => cb(e.payload)),
 
   modes: () => invoke<ModeList>("list_modes"),
   saveMode: (mode: Mode) => invoke<void>("save_mode", { mode }),
@@ -243,7 +288,9 @@ export const api = {
   diskCrumbs: (id: number) => invoke<Crumb[]>("disk_crumbs", { id }),
   diskLargest: (id: number) => invoke<DiskFile[]>("disk_largest", { id }),
   diskReveal: (id: number) => invoke<void>("disk_reveal", { id }),
-  diskDelete: (ids: number[]) => invoke<DeleteResult>("disk_delete", { ids }),
+  diskPath: (id: number) => invoke<string | null>("disk_path", { id }),
+  diskEntry: (id: number) => invoke<DiskEntry | null>("disk_entry", { id }),
+  diskDelete: (ids: number[], permanent: boolean) => invoke<DeleteResult>("disk_delete", { ids, permanent }),
   onDiskProgress: (cb: (p: DiskProgress) => void): Promise<UnlistenFn> =>
     listen<DiskProgress>("crp://disk", (e) => cb(e.payload)),
 
@@ -252,7 +299,8 @@ export const api = {
   dupesReport: () => invoke<DupeReport | null>("dupes_report"),
   dupesReveal: (id: number) => invoke<void>("dupes_reveal", { id }),
   icons: (keys: string[]) => invoke<Record<string, string>>("icons", { keys }),
-  dupesDelete: (ids: number[]) => invoke<DeleteResult>("dupes_delete", { ids }),
+  dupesPath: (id: number) => invoke<string | null>("dupes_path", { id }),
+  dupesDelete: (ids: number[], permanent: boolean) => invoke<DeleteResult>("dupes_delete", { ids, permanent }),
   onDupesProgress: (cb: (p: DupeProgress) => void): Promise<UnlistenFn> =>
     listen<DupeProgress>("crp://dupes", (e) => cb(e.payload)),
 

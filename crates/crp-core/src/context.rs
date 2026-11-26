@@ -2,12 +2,17 @@ use crate::env::Env;
 use crate::settings::Settings;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
-/// Bandera de cancelación compartida entre la UI y los hilos de trabajo.
+/// Mando de una tarea compartido entre la UI y los hilos de trabajo:
+/// bandera de cancelación y la ruta que se está tocando ahora mismo (para
+/// enseñar qué se elimina).
 #[derive(Debug, Clone, Default)]
-pub struct CancelToken(Arc<AtomicBool>);
+pub struct CancelToken {
+    cancelled: Arc<AtomicBool>,
+    current: Arc<Mutex<Option<PathBuf>>>,
+}
 
 impl CancelToken {
     pub fn new() -> Self {
@@ -15,11 +20,24 @@ impl CancelToken {
     }
 
     pub fn cancel(&self) {
-        self.0.store(true, Ordering::Relaxed);
+        self.cancelled.store(true, Ordering::Relaxed);
     }
 
     pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::Relaxed)
+        self.cancelled.load(Ordering::Relaxed)
+    }
+
+    /// Anota la ruta en curso. Si otro hilo la está anotando, se omite: es
+    /// sólo informativa y no debe frenar el borrado.
+    pub fn set_current(&self, path: &Path) {
+        if let Ok(mut c) = self.current.try_lock() {
+            *c = Some(path.to_path_buf());
+        }
+    }
+
+    /// Última ruta anotada con [`set_current`](Self::set_current).
+    pub fn current(&self) -> Option<PathBuf> {
+        self.current.lock().ok().and_then(|c| c.clone())
     }
 }
 

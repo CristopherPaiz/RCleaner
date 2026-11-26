@@ -4,8 +4,37 @@
   import { LANGUAGES, resolveLang, t, tn } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
   import ModeEditor from "../components/ModeEditor.svelte";
+  import Switch from "../components/Switch.svelte";
+  import Modal from "../components/Modal.svelte";
+  import DeletionLog from "../components/DeletionLog.svelte";
+  import { formatBytes, formatDate } from "../lib/format";
+  import { onMount } from "svelte";
+  import type { BackgroundStatus } from "../lib/api";
 
   let editor = $state<{ initial: Mode | null; editing: boolean } | null>(null);
+  let askSystem = $state(false);
+  let agreed = $state(false);
+  let showLog = $state(false);
+  let bgStatus = $state<BackgroundStatus | null>(null);
+
+  onMount(() => {
+    void api.backgroundStatus().then((s) => (bgStatus = s));
+  });
+
+  const HOURS = [1, 3, 6, 12, 24, 72];
+  const THRESHOLDS = [512, 1024, 2048, 5120, 10240];
+
+  function setBackground(patch: Partial<Settings["background"]>) {
+    void update({ background: { ...app.settings.background, ...patch } });
+  }
+
+  function toggleSystem(on: boolean) {
+    if (!on) void update({ allow_system: false });
+    else {
+      agreed = false;
+      askSystem = true;
+    }
+  }
 
   const auto = $derived(app.settings.dev_roots.length === 0);
   const roots = $derived(auto ? (app.info?.auto_dev_roots ?? []) : app.settings.dev_roots);
@@ -95,6 +124,89 @@
   </section>
 
   <section>
+    <h2>{t("ui.settings.system")}</h2>
+    <div class="group">
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.always_admin")}
+          <span class="faint block">{t("ui.settings.always_admin_hint")}</span>
+        </span>
+        <Switch checked={app.settings.always_admin} label={t("ui.settings.always_admin")} onchange={(v) => update({ always_admin: v })} />
+      </div>
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.tray")}
+          <span class="faint block">{t("ui.settings.tray_hint")}</span>
+        </span>
+        <Switch checked={app.settings.tray} label={t("ui.settings.tray")} onchange={(v) => update({ tray: v })} />
+      </div>
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.autostart")}
+          <span class="faint block">{t("ui.settings.autostart_hint")}</span>
+        </span>
+        <Switch checked={app.settings.autostart} label={t("ui.settings.autostart")} onchange={(v) => update({ autostart: v })} />
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>{t("ui.settings.background")}</h2>
+    <div class="group">
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.background_on")}
+          <span class="faint block">{t("ui.settings.background_hint")}</span>
+        </span>
+        <Switch checked={app.settings.background.enabled} label={t("ui.settings.background_on")} onchange={(v) => setBackground({ enabled: v })} />
+      </div>
+      {#if app.settings.background.enabled}
+        <div class="item">
+          <span class="grow">{t("ui.settings.every")}</span>
+          <select class="field" value={app.settings.background.every_hours} onchange={(e) => setBackground({ every_hours: Number((e.currentTarget as HTMLSelectElement).value) })}>
+            {#each HOURS as h (h)}<option value={h}>{tn("ui.settings.hours", h)}</option>{/each}
+          </select>
+        </div>
+        <div class="item">
+          <span class="grow">
+            {t("ui.settings.threshold")}
+            <span class="faint block">{t("ui.settings.threshold_hint")}</span>
+          </span>
+          <select class="field" value={app.settings.background.threshold_mb} onchange={(e) => setBackground({ threshold_mb: Number((e.currentTarget as HTMLSelectElement).value) })}>
+            {#each THRESHOLDS as mb (mb)}<option value={mb}>{formatBytes(mb * 1024 * 1024)}</option>{/each}
+          </select>
+        </div>
+        {#if bgStatus}
+          <div class="item faint small">
+            <Icon name="activity" size={14} />
+            {t("ui.settings.last_check", { date: formatDate(bgStatus.timestamp), size: formatBytes(bgStatus.bytes) })}
+          </div>
+        {/if}
+      {/if}
+    </div>
+  </section>
+
+  <section>
+    <h2>{t("ui.settings.safety")}</h2>
+    <div class="group">
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.allow_system")}
+          <span class="faint block">{t("ui.settings.allow_system_hint")}</span>
+        </span>
+        <Switch checked={app.settings.allow_system} label={t("ui.settings.allow_system")} onchange={toggleSystem} />
+      </div>
+      <div class="item">
+        <span class="grow">
+          {t("ui.log.title")}
+          <span class="faint block">{t("ui.log.hint")}</span>
+        </span>
+        <button class="btn small" onclick={() => (showLog = true)}><Icon name="list" size={14} /> {t("ui.log.open")}</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
     <div class="sec-head">
       <div>
         <h2>{t("ui.settings.dev_roots")}</h2>
@@ -129,7 +241,7 @@
     </div>
     <div class="group">
       {#each app.settings.exclusions as p (p)}
-        <div class="item">
+        <div class="item excl">
           <Icon name="shield" size={16} />
           <span class="ellipsis grow">{p}</span>
           <button class="icon-btn" title={t("ui.common.remove")} onclick={() => removeFolder("exclusions", p)}><Icon name="x" size={14} /></button>
@@ -199,6 +311,11 @@
         {#if app.info}
           <button class="btn small" onclick={() => api.reveal(app.info!.config_dir)}><Icon name="external" size={14} /> {t("ui.settings.config_folder")}</button>
         {/if}
+        <button class="btn small" onclick={() => (app.view = "about")}><Icon name="info" size={14} /> {t("ui.about.open")}</button>
+      </div>
+      <div class="item">
+        <span class="grow">{t("ui.settings.wizard")}</span>
+        <button class="btn small" onclick={() => update({ onboarded: false })}><Icon name="refresh" size={14} /> {t("ui.settings.wizard_again")}</button>
       </div>
     </div>
   </section>
@@ -206,6 +323,34 @@
 
 {#if editor}
   <ModeEditor initial={editor.initial} editing={editor.editing} onsave={saveMode} oncancel={() => (editor = null)} />
+{/if}
+
+{#if showLog}
+  <DeletionLog onclose={() => (showLog = false)} />
+{/if}
+
+{#if askSystem}
+  <Modal title={t("ui.settings.allow_system")} onclose={() => (askSystem = false)}>
+    <div class="danger-box">
+      <Icon name="alert" size={20} />
+      <p>{t("ui.settings.allow_system_warn")}</p>
+    </div>
+    <label class="agree">
+      <input type="checkbox" bind:checked={agreed} />
+      <span>{t("ui.system.agree")}</span>
+    </label>
+    {#snippet buttons()}
+      <button class="btn" onclick={() => (askSystem = false)}>{t("ui.common.cancel")}</button>
+      <button
+        class="btn danger"
+        disabled={!agreed}
+        onclick={() => {
+          askSystem = false;
+          void update({ allow_system: true });
+        }}>{t("ui.settings.allow_system_enable")}</button
+      >
+    {/snippet}
+  </Modal>
 {/if}
 
 <style>
@@ -229,4 +374,17 @@
   .dup > .faint { margin-right: 6px; font-size: 13px; }
   .field { min-width: 200px; }
   .error { color: var(--bad); font-size: 13px; margin-top: 8px; }
+  .item.excl :global(svg) { color: var(--excl); }
+  .item.small { min-height: 40px; font-size: 12px; }
+  .danger-box {
+    display: flex; gap: 12px; padding: 12px 14px; border-radius: 12px; color: var(--bad); font-size: 13px;
+    background: color-mix(in srgb, var(--bad) 10%, transparent); border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent);
+  }
+  .danger-box p { color: var(--text); }
+  .agree { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 13px; cursor: pointer; }
+  .btn.danger { background: var(--bad); border: 0; color: #fff; font-weight: 600; }
+  @media (max-width: 700px) {
+    .item { flex-wrap: wrap; }
+    .field { min-width: 0; width: 100%; }
+  }
 </style>

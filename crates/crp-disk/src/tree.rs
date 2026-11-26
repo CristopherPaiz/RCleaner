@@ -131,6 +131,8 @@ pub struct Entry {
     pub modified: u64,
     /// Por qué no se puede eliminar (archivo de Windows, carpeta base…).
     pub protected: Option<String>,
+    /// Está en las exclusiones del usuario (lo marca quien llama).
+    pub excluded: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -141,6 +143,8 @@ pub struct FileEntry {
     pub size: u64,
     pub modified: u64,
     pub protected: Option<String>,
+    /// Está en las exclusiones del usuario (lo marca quien llama).
+    pub excluded: bool,
 }
 
 /// Sin extensión conocida (carpetas y piezas "resto").
@@ -610,6 +614,7 @@ impl DiskTree {
                     kind: cn.kind,
                     modified: cn.modified,
                     protected: self.protection(c),
+                    excluded: false,
                 }
             })
             .collect()
@@ -654,6 +659,7 @@ impl DiskTree {
                     path,
                     size,
                     modified: node.modified,
+                    excluded: false,
                 })
             })
             .collect();

@@ -11,6 +11,8 @@
   import Icon from "./Icon.svelte";
   import FileIcon from "./FileIcon.svelte";
   import { folderSvg } from "../lib/icons.svelte";
+  import { menu, type MenuEntry } from "../lib/menu.svelte";
+  import { copyText } from "../lib/activity.svelte";
 
   interface Props {
     report: ScanReport;
@@ -73,6 +75,33 @@
     };
   }
 
+  function rowMenu(e: MouseEvent, f: Finding) {
+    const on = app.selected.has(f.id);
+    const excl = f.path ? app.exclusionFor(f.path) : undefined;
+    const items: (MenuEntry | false)[] = [
+      on
+        ? { label: t("ui.menu.unmark"), icon: "minus", action: () => void app.selected.delete(f.id) }
+        : { label: t("ui.menu.mark"), icon: "check", disabled: !app.selectable(f), action: () => void app.selected.add(f.id) },
+      "-",
+      !!f.path && { label: t("ui.common.show_in_explorer"), icon: "external", action: () => api.reveal(f.path!) },
+      !!f.path && { label: t("ui.menu.copy_path"), icon: "copy", action: () => copyText(f.path!) },
+      "-",
+      !!f.path &&
+        (excl
+          ? { label: t("ui.menu.unexclude"), icon: "ban", action: () => app.removeExclusion(excl) }
+          : {
+              label: t("ui.menu.exclude"),
+              icon: "shield",
+              hint: t("ui.menu.exclude_hint"),
+              action: async () => {
+                app.selected.delete(f.id);
+                await app.addExclusion(f.path!);
+              },
+            }),
+    ];
+    menu.show(e, items.filter((x): x is MenuEntry => !!x));
+  }
+
   function toggleGroup(items: Finding[]) {
     const ok = items.filter((f) => app.selectable(f));
     const all = ok.every((f) => app.selected.has(f.id));
@@ -115,7 +144,7 @@
           {#each g.items as f (f.id)}
             {@const off = !app.selectable(f)}
             {@const ic = findingIcon(f)}
-            <div class="row" class:off>
+            <div class="row" class:off class:excluded={!!f.path && !!app.exclusionFor(f.path)} oncontextmenu={(e) => rowMenu(e, f)} role="listitem">
               <input
                 type="checkbox"
                 checked={app.selected.has(f.id)}
@@ -191,6 +220,7 @@
   }
   .row:hover { background: var(--hover); }
   .row.off { opacity: 0.55; }
+  .row.excluded .label { color: var(--excl); font-style: italic; }
   .main { min-width: 0; }
   .f-ic { display: grid; place-items: center; color: var(--text-3); }
   .label { font-weight: 500; }

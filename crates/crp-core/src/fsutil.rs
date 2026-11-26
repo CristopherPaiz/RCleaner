@@ -221,6 +221,7 @@ pub fn delete_contents(root: &Path, filter: &EntryFilter, cancel: &CancelToken) 
             if !matcher.file_matches(entry.file_name(), &meta) {
                 continue;
             }
+            cancel.set_current(path);
             match remove_file_force(path) {
                 Ok(()) => {
                     stats.freed += meta.len();
@@ -250,6 +251,7 @@ pub fn delete_path(path: &Path, cancel: &CancelToken) -> DeleteStats {
             return stats;
         }
     };
+    cancel.set_current(path);
     if meta.is_file() {
         match remove_file_force(path) {
             Ok(()) => {

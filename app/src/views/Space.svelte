@@ -3,7 +3,11 @@
   import { t, tn } from "../lib/i18n.svelte";
   import { api, type Drive } from "../lib/api";
   import { app } from "../lib/app.svelte";
-  import { space, type SpaceTab } from "../lib/space.svelte";
+  import { space, type Pick, type SpaceTab } from "../lib/space.svelte";
+  import { menu, type MenuEntry } from "../lib/menu.svelte";
+  import { copyText } from "../lib/activity.svelte";
+  import DeleteFlow from "../components/DeleteFlow.svelte";
+  import SystemPick from "../components/SystemPick.svelte";
   import { layout } from "../lib/sunburst";
   import { fileIcon, formatAge, formatBytes, formatCount, splitBytes, splitPath } from "../lib/format";
   import Glyph from "../components/Glyph.svelte";
@@ -16,12 +20,86 @@
   import Sunburst from "../components/Sunburst.svelte";
   import Treemap from "../components/Treemap.svelte";
   import { extColor, rgb } from "../lib/treemap";
-  import Modal from "../components/Modal.svelte";
 
   const RINGS = 4;
   let drives = $state<Drive[]>([]);
-  let confirming = $state(false);
+  let deleting = $state(false);
+  let systemAsk = $state<{ pick: Pick; reason: string } | null>(null);
   let hoverId = $state<number | null>(null);
+
+  /** Lo necesario de una carpeta o archivo para marcarlo o abrir su menú. */
+  interface NodeInfo {
+    id: number;
+    name: string;
+    size: number;
+    kind: "dir" | "file" | "link";
+    protected: string | null;
+    excluded: boolean;
+  }
+
+  const canPick = (n: NodeInfo) => n.kind !== "link" && !n.excluded && (!n.protected || app.settings.allow_system);
+
+  /** Marca o desmarca. Los archivos de Windows piden aceptar el riesgo cada vez. */
+  function pick(n: NodeInfo) {
+    if (space.picks.has(n.id)) {
+      space.picks.delete(n.id);
+      return;
+    }
+    if (!canPick(n)) return;
+    const p: Pick = { id: n.id, name: n.name, size: n.size };
+    if (n.protected) systemAsk = { pick: { ...p, system: true }, reason: n.protected };
+    else space.togglePick(p);
+  }
+
+  async function nodeMenu(e: MouseEvent, n: NodeInfo) {
+    e.preventDefault();
+    const path = await api.diskPath(n.id);
+    const excl = path ? app.exclusionFor(path) : undefined;
+    const picked = space.picks.has(n.id);
+    const why = n.excluded ? t("ui.menu.excluded") : n.protected && !app.settings.allow_system ? t("ui.menu.protected") : undefined;
+    const items: (MenuEntry | false | null)[] = [
+      n.kind === "dir" && { label: t("ui.menu.open"), icon: "folder", action: () => space.open(n.id) },
+      { label: t("ui.common.show_in_explorer"), icon: "external", action: () => api.diskReveal(n.id) },
+      !!path && { label: t("ui.menu.copy_path"), icon: "copy", action: () => copyText(path!) },
+      "-",
+      picked
+        ? { label: t("ui.space.unpick"), icon: "minus", action: () => void space.picks.delete(n.id) }
+        : { label: t("ui.space.pick"), icon: "plus", disabled: !canPick(n), hint: why, action: () => pick(n) },
+      "-",
+      excl
+        ? {
+            label: t(excl.toLowerCase() === path?.toLowerCase() ? "ui.menu.unexclude" : "ui.menu.unexclude_parent"),
+            icon: "ban",
+            action: async () => {
+              await app.removeExclusion(excl);
+              await space.refresh();
+            },
+          }
+        : !!path && {
+            label: t("ui.menu.exclude"),
+            icon: "shield",
+            action: async () => {
+              await app.addExclusion(path!);
+              space.picks.delete(n.id);
+              await space.refresh();
+            },
+          },
+    ];
+    menu.show(e, items.filter((x): x is MenuEntry => !!x));
+  }
+
+  async function chartMenu(e: MouseEvent, id: number) {
+    e.preventDefault();
+    const n = await api.diskEntry(id);
+    if (n) await nodeMenu(e, n);
+  }
+
+  function driveMenu(e: MouseEvent, d: Drive) {
+    menu.show(e, [
+      { label: t("ui.menu.analyze"), icon: "pie", action: () => space.scan(d.root) },
+      { label: t("ui.menu.copy_path"), icon: "copy", action: () => copyText(d.root) },
+    ]);
+  }
 
   onMount(() => {
     void api.drives().then((d) => (drives = d));
@@ -52,10 +130,6 @@
     { id: "types", label: "ui.space.tab_types" },
   ];
 
-  async function confirmDelete() {
-    confirming = false;
-    await space.deletePicks();
-  }
 
   $effect(() => {
     if (space.error) {
@@ -75,7 +149,7 @@
       {#each drives as d (d.root)}
         {@const used = d.total_bytes - d.free_bytes}
         {@const pct = d.total_bytes ? used / d.total_bytes : 0}
-        <button class="drive" onclick={() => space.scan(d.root)}>
+        <button class="drive" onclick={() => space.scan(d.root)} oncontextmenu={(e) => driveMenu(e, d)}>
           <span class="d-ic"><FileIcon key="drive:{d.root}" fallback="drive" size={22} /></span>
           <span class="d-main">
             <span class="d-name">{d.label || t("ui.common.local_disk")} <span class="faint">({d.root.replace("\\", "")})</span></span>
@@ -105,7 +179,7 @@
     <nav class="crumbs" aria-label={t("ui.space.path")}>
       {#each space.crumbs as c, i (c.id)}
         {#if i > 0}<Icon name="chevron" size={14} />{/if}
-        <button class="crumb" class:last={i === space.crumbs.length - 1} onclick={() => space.open(c.id)}>
+        <button class="crumb" class:last={i === space.crumbs.length - 1} title={c.name} onclick={() => space.open(c.id)}>
           {i === 0 ? c.name.replace(/\\$/, "") : c.name}
         </button>
       {/each}
@@ -122,7 +196,7 @@
   <div class="split" class:wide={space.chart === "map"}>
     <div class="chart" class:map={space.chart === "map"}>
       {#if space.chart === "map" && space.treemap}
-        <Treemap data={space.treemap} {ranks} onopen={(id) => space.open(id)} highlight={hoverId} />
+        <Treemap data={space.treemap} {ranks} onopen={(id) => space.open(id)} highlight={hoverId} onmenu={chartMenu} />
       {:else}
       <Sunburst
         view={space.view}
@@ -131,6 +205,7 @@
         onopen={(id) => space.open(id)}
         onup={() => space.up()}
         highlight={hoverId}
+        onmenu={chartMenu}
       />
       {/if}
     </div>
@@ -145,7 +220,15 @@
       <div class="rows">
         {#if space.tab === "folder"}
           {#each space.entries as e (e.id)}
-            <div class="row" role="listitem" onmouseenter={() => (hoverId = e.id)} onmouseleave={() => (hoverId = null)}>
+            <div
+              class="row"
+              class:excluded={e.excluded}
+              class:picked={space.picks.has(e.id)}
+              role="listitem"
+              onmouseenter={() => (hoverId = e.id)}
+              onmouseleave={() => (hoverId = null)}
+              oncontextmenu={(ev) => nodeMenu(ev, e)}
+            >
               <span class="sw" style:background={colors.get(e.id) ?? "var(--line-2)"}></span>
               <button class="name" disabled={e.kind !== "dir"} onclick={() => space.open(e.id)}>
                 {#if e.kind === "dir"}
@@ -161,18 +244,7 @@
               <span class="size num">{formatBytes(e.size)}</span>
               <span class="acts">
                 <button class="icon-btn" title={t("ui.common.show_in_explorer")} onclick={() => api.diskReveal(e.id)}><Icon name="external" size={14} /></button>
-                {#if e.protected}
-                  <span class="icon-btn locked" title={e.protected} aria-label={e.protected}><Icon name="lock" size={14} /></span>
-                {:else if e.kind !== "link"}
-                  <button
-                    class="icon-btn pick"
-                    class:on={space.picks.has(e.id)}
-                    title={t(space.picks.has(e.id) ? "ui.space.unpick" : "ui.space.pick")}
-                    onclick={() => space.togglePick({ id: e.id, name: e.name, size: e.size })}
-                  >
-                    <Icon name={space.picks.has(e.id) ? "check" : "plus"} size={14} />
-                  </button>
-                {/if}
+                {@render pickBtn(e)}
               </span>
             </div>
           {:else}
@@ -181,7 +253,8 @@
         {:else if space.tab === "largest"}
           {#each space.largest as f (f.id)}
             {@const [dir] = splitPath(f.path)}
-            <div class="row file">
+            {@const fn = { ...f, kind: "file" as const }}
+            <div class="row file" class:excluded={f.excluded} class:picked={space.picks.has(f.id)} oncontextmenu={(ev) => nodeMenu(ev, fn)} role="listitem">
               <span class="f-ic"><FileIcon key={fileKey(f.name, `node:${f.id}`)} fallback={fileIcon(f.name)} size={20} /></span>
               <span class="f-main">
                 <span class="ellipsis">{f.name}</span>
@@ -190,18 +263,7 @@
               <span class="size num">{formatBytes(f.size)}</span>
               <span class="acts">
                 <button class="icon-btn" title={t("ui.common.show_in_explorer")} onclick={() => api.diskReveal(f.id)}><Icon name="external" size={14} /></button>
-                {#if f.protected}
-                  <span class="icon-btn locked" title={f.protected} aria-label={f.protected}><Icon name="lock" size={14} /></span>
-                {:else}
-                  <button
-                    class="icon-btn pick"
-                    class:on={space.picks.has(f.id)}
-                    title={t(space.picks.has(f.id) ? "ui.space.unpick" : "ui.space.pick")}
-                    onclick={() => space.togglePick({ id: f.id, name: f.name, size: f.size })}
-                  >
-                    <Icon name={space.picks.has(f.id) ? "check" : "plus"} size={14} />
-                  </button>
-                {/if}
+                {@render pickBtn(fn)}
               </span>
             </div>
           {:else}
@@ -234,9 +296,9 @@
     {/snippet}
     {#snippet center()}
       <ActionButton
-        label={t("ui.common.to_bin")}
+        label={t("ui.space.continue")}
         disabled={space.picks.size === 0}
-        onclick={() => (confirming = true)}
+        onclick={() => (deleting = true)}
       />
     {/snippet}
     {#snippet right()}
@@ -248,7 +310,7 @@
       {:else if space.lastDelete}
         <div class="sel">
           <strong class="num ok">{formatBytes(space.lastDelete.freed_bytes)}</strong>
-          <span class="faint">{t("ui.common.moved_to_bin")}</span>
+          <span class="faint">{t(space.lastPermanent ? "ui.common.deleted_forever" : "ui.common.moved_to_bin")}</span>
         </div>
       {:else}
         <span class="faint hint">{t("ui.space.hint_before")} <Icon name="plus" size={12} /> {t("ui.space.hint_after")}</span>
@@ -257,20 +319,43 @@
   </Dock>
 {/if}
 
-{#if confirming}
-  <Modal title={t("ui.space.confirm_title", { size: formatBytes(space.picksBytes) })} onclose={() => (confirming = false)}>
-    <p class="dim">{t("ui.space.confirm_text")}</p>
-    <ul class="picklist">
-      {#each [...space.picks.values()].slice(0, 8) as p (p.id)}
-        <li><span class="ellipsis">{p.name}</span><span class="num faint">{formatBytes(p.size)}</span></li>
-      {/each}
-      {#if space.picks.size > 8}<li class="faint">{t("ui.common.and_more", { n: space.picks.size - 8 })}</li>{/if}
-    </ul>
-    {#snippet buttons()}
-      <button class="btn" onclick={() => (confirming = false)}>{t("ui.common.cancel")}</button>
-      <button class="btn accent" onclick={confirmDelete}>{t("ui.common.move_to_bin")}</button>
-    {/snippet}
-  </Modal>
+{#snippet pickBtn(n: NodeInfo)}
+  {#if n.excluded}
+    <span class="icon-btn state excl" title={t("ui.space.excluded")} aria-label={t("ui.space.excluded")}><Icon name="shield" size={14} /></span>
+  {:else if n.protected && !app.settings.allow_system}
+    <span class="icon-btn state" title={n.protected} aria-label={n.protected}><Icon name="lock" size={14} /></span>
+  {:else if n.kind !== "link"}
+    <button
+      class="icon-btn pick"
+      class:on={space.picks.has(n.id)}
+      class:sys={!!n.protected}
+      title={n.protected ? `${t("ui.space.pick")} · ${n.protected}` : t(space.picks.has(n.id) ? "ui.space.unpick" : "ui.space.pick")}
+      onclick={() => pick(n)}
+    >
+      <Icon name={space.picks.has(n.id) ? "check" : n.protected ? "alert" : "plus"} size={14} />
+    </button>
+  {/if}
+{/snippet}
+
+{#if deleting}
+  <DeleteFlow
+    items={[...space.picks.values()].map((p) => ({ key: p.id, name: p.name, size: p.size, system: p.system }))}
+    run={(permanent) => space.deletePicks(permanent)}
+    onclose={() => (deleting = false)}
+  />
+{/if}
+
+{#if systemAsk}
+  {@const ask = systemAsk}
+  <SystemPick
+    name={ask.pick.name}
+    reason={ask.reason}
+    oncancel={() => (systemAsk = null)}
+    onaccept={() => {
+      space.picks.set(ask.pick.id, ask.pick);
+      systemAsk = null;
+    }}
+  />
 {/if}
 
 <style>
@@ -303,12 +388,15 @@
 
   .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 32px 4px; }
   .crumbs { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; color: var(--text-3); }
-  .crumb { border: 0; background: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; color: var(--text-2); white-space: nowrap; }
+  .crumbs > :global(svg) { flex-shrink: 0; }
+  /* Rutas largas: se encogen las carpetas de arriba, nunca la actual. */
+  .crumb { flex: 0 1 auto; min-width: 2.2em; overflow: hidden; text-overflow: ellipsis; border: 0; background: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; color: var(--text-2); white-space: nowrap; }
+  .crumb.last { flex-shrink: 0; max-width: 55%; }
   .crumb:hover { background: var(--hover); color: var(--text); }
   .crumb.last { color: var(--text); font-weight: 600; font-family: var(--font-display); font-size: 17px; }
 
   .split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 1.1fr) minmax(340px, 1fr); gap: 24px; padding: 8px 32px 0; }
-  .chart { min-height: 0; display: grid; place-items: center; padding: 8px; }
+  .chart { min-height: 0; display: grid; place-items: center; padding: 8px; container-type: size; }
   .split.wide { grid-template-columns: minmax(360px, 1.7fr) minmax(340px, 1fr); }
   .chart.map { display: block; padding: 0 0 12px; }
   .bar-acts { display: flex; align-items: center; gap: 10px; }
@@ -334,9 +422,17 @@
   .share > span { display: block; height: 100%; background: color-mix(in srgb, var(--a) 70%, transparent); border-radius: 99px; }
   .size { text-align: right; font-weight: 600; }
   .acts { display: flex; justify-content: flex-end; gap: 2px; opacity: 0; transition: opacity 0.1s; }
-  .row:hover .acts, .acts:has(.on) { opacity: 1; }
-  .locked { cursor: help; color: var(--text-3, var(--text-2)); opacity: .75; }
+  .row:hover .acts, .acts:has(.on), .acts:has(.excl) { opacity: 1; }
+  .state { cursor: help; color: var(--text-3); opacity: 0.75; }
   .pick.on { color: #fff; background: linear-gradient(135deg, var(--a), var(--b)); }
+  .pick.sys { color: var(--warn); }
+  .pick.sys.on { background: var(--warn); color: #1a1205; }
+  .row.picked { background: color-mix(in srgb, var(--a) 9%, transparent); }
+  /* Exclusiones: verde azulado, en cursiva y sin poder marcarse. */
+  .row.excluded { background: color-mix(in srgb, var(--excl) 8%, transparent); }
+  .row.excluded .name, .row.excluded .f-main > span:first-child { color: var(--excl); font-style: italic; }
+  .row.excluded .share > span { background: color-mix(in srgb, var(--excl) 60%, transparent); }
+  .excl { color: var(--excl); opacity: 1; }
   .f-ic { color: var(--text-3); }
   .f-main { display: flex; flex-direction: column; min-width: 0; }
   .small { font-size: 11px; }
@@ -352,11 +448,15 @@
   .ok { color: var(--ok); }
   .hint { font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
 
-  .picklist { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
-  .picklist li { display: flex; justify-content: space-between; gap: 12px; }
-
   @media (max-width: 1000px) {
-    .split { grid-template-columns: 1fr; overflow: auto; }
-    .chart { max-height: 380px; }
+    .split, .split.wide { grid-template-columns: 1fr; grid-template-rows: auto auto; overflow: auto; }
+    .chart { height: 320px; flex-shrink: 0; }
+    .chart.map { height: 300px; }
+    .panel { min-height: 360px; }
+    .rows { overflow: visible; }
+  }
+  @media (max-height: 700px) {
+    .bar { padding-bottom: 0; }
+    .split { padding-top: 4px; }
   }
 </style>

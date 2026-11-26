@@ -56,6 +56,14 @@ tampoco; `modules` y `disk` usan ambos; CLI y app usan `modules`, `disk` y `core
    carpeta a vaciar viajan en `EntryFilter.exclude` y el recorrido no entra en
    ellas ni al medir ni al borrar. (Nota: el recorrido es en pre-orden; walkdir
    con `contents_first` + `filter_entry` salta hermanos.)
+10. Espacio/Duplicados pasan por `deletable()`: `check_target` siempre aplica;
+    `protect::reason` (archivos de sistema) y Program Files/Windows sólo se
+    levantan si el usuario activa `allow_system`, y la UI pide confirmación en
+    cada selección así. Las exclusiones nunca se pueden borrar.
+11. Cada borrado se añade a `deleted.log` (líneas JSON, se recorta pasados
+    4 MB) con origen, ruta, tamaño y si fue permanente.
+12. `unsafe` está prohibido (`#![forbid(unsafe_code)]`) en todo salvo
+    `crp-platform`, que envuelve la API de Windows.
 
 ## Espacio y duplicados (`crp-disk`)
 
@@ -125,16 +133,35 @@ app/src/
   lib/dupes.svelte.ts  duplicados: carpetas, opciones, selección automática
   lib/sunburst.ts      geometría y colores del mapa radial
   lib/selectors.ts     misma lógica de selectores que Rust (editor de modos)
-  views/               Home, Clean, Space, Dupes, Settings
-  components/          Glyph, ActionButton, Dock, Modal, Sunburst, ResultList,
-                       ConfirmDialog, ModeEditor, Icon (SVG en línea)
+  lib/nav.svelte.ts    historial de vistas (botones del ratón, Alt+flechas)
+  lib/menu.svelte.ts   menú contextual global
+  lib/activity.svelte.ts  ruta que se borra y progreso del borrado
+  views/               Home, Clean, Space, Dupes, Settings, About
+  components/          Glyph, ActionButton, Dock, Modal, Sunburst, Treemap,
+                       ResultList, ConfirmDialog, DeleteFlow, ContextMenu,
+                       Wizard, DeletionLog, ModeEditor, Icon (SVG en línea)
 app/src-tauri/src/
   state.rs             motor, ajustes, último escaneo, árbol de disco, duplicados,
                        un token de cancelación por tarea
-  commands.rs          info, modos, ajustes, scan/clean, cancel(task), reveal, admin
+  commands.rs          info, modos, ajustes, scan/clean, cancel(task), reveal, admin,
+                       registro de borrados, enlaces
   space.rs             disk_* (scan, view, children, crumbs, largest, reveal, delete)
                        y dupes_* (scan, report, reveal, delete)
+  tray.rs              icono y menú de la bandeja; al minimizar se destruye la ventana
+  background.rs        análisis periódico de sólo lectura + notificación
 ```
+
+- **Bandeja y memoria**: con "minimizar a la bandeja", minimizar *destruye* la
+  ventana (WebView2 y sus procesos se cierran), suelta los árboles de disco y
+  duplicados y recorta la memoria. Si hay una tarea en curso (guarda
+  `AppState::busy()`) sólo se oculta. `tray::show` la vuelve a crear desde
+  `tauri.conf.json` (`"create": false`, así `main()` decide si mostrarla).
+- `--background` (inicio con Windows) arranca sin ventana; `--wait-pid` deja
+  que un relanzamiento (p. ej. como administrador) espere a que salga la
+  instancia anterior. `tauri-plugin-single-instance` manda un segundo arranque
+  a `tray::show`.
+- Borrar emite `crp://delete` (hecho/total/actual) y `crp://now` (ruta que se
+  está borrando, cada 100 ms, desde `CancelToken::current`).
 
 - Trabajo pesado en `spawn_blocking`; progreso por eventos `crp://progress`,
   `crp://disk` (cada 150 ms) y `crp://dupes`.

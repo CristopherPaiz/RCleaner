@@ -9,6 +9,7 @@ pub mod elevation;
 pub mod files;
 pub mod icons;
 pub mod locale;
+pub mod process;
 pub mod processes;
 pub mod recycle_bin;
 

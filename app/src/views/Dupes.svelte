@@ -12,7 +12,9 @@
   import FileIcon from "../components/FileIcon.svelte";
   import { fileKey } from "../lib/icons.svelte";
   import Icon from "../components/Icon.svelte";
-  import Modal from "../components/Modal.svelte";
+  import DeleteFlow from "../components/DeleteFlow.svelte";
+  import { menu } from "../lib/menu.svelte";
+  import { copyText } from "../lib/activity.svelte";
 
   const PAGE = 120;
   let shown = $state(PAGE);
@@ -53,9 +55,40 @@
     return splitPath(g.files[0].path)[1];
   }
 
-  async function confirmDelete() {
-    confirming = false;
-    await dupes.deleteSelected();
+  /** Archivos marcados, con su tamaño, para el diálogo de borrado. */
+  const marked = $derived.by(() => {
+    const out: { key: number; name: string; size: number }[] = [];
+    for (const g of dupes.report?.groups ?? []) {
+      for (const f of g.files) if (dupes.selected.has(f.id)) out.push({ key: f.id, name: f.path, size: g.size });
+    }
+    return out;
+  });
+
+  function fileMenu(e: MouseEvent, g: DupeGroup, f: { id: number; path: string }) {
+    const isMarked = dupes.selected.has(f.id);
+    const [dir] = splitPath(f.path);
+    const excl = app.exclusionFor(dir);
+    menu.show(e, [
+      { label: t("ui.common.show_in_explorer"), icon: "external", action: () => api.dupesReveal(f.id) },
+      { label: t("ui.menu.copy_path"), icon: "copy", action: () => copyText(f.path) },
+      "-",
+      isMarked
+        ? { label: t("ui.dupes.keep_this"), icon: "check", action: () => dupes.toggle(g, f.id) }
+        : { label: t("ui.dupes.mark_this"), icon: "trash", action: () => dupes.toggle(g, f.id) },
+      { label: t("ui.dupes.keep_only_this"), icon: "star", action: () => keepOnly(g, f.id) },
+      "-",
+      excl
+        ? { label: t("ui.menu.unexclude_parent"), icon: "ban", action: () => app.removeExclusion(excl) }
+        : { label: t("ui.menu.exclude_folder"), icon: "shield", action: () => app.addExclusion(dir) },
+    ]);
+  }
+
+  /** Conserva sólo `id` y marca las demás copias del grupo. */
+  function keepOnly(g: DupeGroup, id: number) {
+    for (const f of g.files) {
+      if (f.id === id) dupes.selected.delete(f.id);
+      else dupes.selected.add(f.id);
+    }
   }
 
   const RULES: { id: KeepRule; label: string }[] = [
@@ -154,7 +187,7 @@
         {#each g.files as f (f.id)}
           {@const [dir, name] = splitPath(f.path)}
           {@const marked = dupes.selected.has(f.id)}
-          <div class="row" class:marked>
+          <div class="row" class:marked oncontextmenu={(e) => fileMenu(e, g, f)} role="listitem">
             <input type="checkbox" checked={marked} onchange={() => dupes.toggle(g, f.id)} aria-label={t("ui.dupes.mark_file", { path: f.path })} />
             <span class="p" title={f.path}><span class="faint dir">{dir}\</span><span class="fname">{name}</span></span>
             <span class="keep">{marked ? "" : t("ui.dupes.kept")}</span>
@@ -179,7 +212,7 @@
       <button class="btn quiet" onclick={() => dupes.reset()}><Icon name="back" size={16} /> {t("ui.dupes.new_search")}</button>
     {/snippet}
     {#snippet center()}
-      <ActionButton label={t("ui.common.to_bin")} disabled={dupes.selected.size === 0} onclick={() => (confirming = true)} />
+      <ActionButton label={t("ui.space.continue")} disabled={dupes.selected.size === 0} onclick={() => (confirming = true)} />
     {/snippet}
     {#snippet right()}
       {#if dupes.selected.size > 0}
@@ -190,7 +223,7 @@
       {:else if dupes.lastDelete}
         <div class="sel">
           <strong class="num ok">{formatBytes(dupes.lastDelete.freed_bytes)}</strong>
-          <span class="faint">{t("ui.common.moved_to_bin")}</span>
+          <span class="faint">{t(dupes.lastPermanent ? "ui.common.deleted_forever" : "ui.common.moved_to_bin")}</span>
         </div>
       {/if}
     {/snippet}
@@ -198,13 +231,7 @@
 {/if}
 
 {#if confirming}
-  <Modal title={tn("ui.dupes.confirm_title", dupes.selected.size)} onclose={() => (confirming = false)}>
-    <p class="dim">{t("ui.dupes.confirm_text", { size: formatBytes(dupes.selectedBytes) })}</p>
-    {#snippet buttons()}
-      <button class="btn" onclick={() => (confirming = false)}>{t("ui.common.cancel")}</button>
-      <button class="btn accent" onclick={confirmDelete}>{t("ui.common.move_to_bin")}</button>
-    {/snippet}
-  </Modal>
+  <DeleteFlow items={marked} run={(permanent) => dupes.deleteSelected(permanent)} onclose={() => (confirming = false)} />
 {/if}
 
 <style>

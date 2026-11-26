@@ -6,6 +6,8 @@
 //!
 //! Para añadir un limpiador basado en rutas basta un [`crp_core::PathRuleModule`];
 //! ver `dev/caches.rs` como ejemplo.
+// Todo el código de sistema (`unsafe`/FFI) vive sólo en crp-platform.
+#![forbid(unsafe_code)]
 
 pub mod ai;
 pub mod browsers;

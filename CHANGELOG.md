@@ -27,11 +27,44 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
   well-known development folders.
 - MSI and EXE installers that bundle WebView2 and the C runtime, so they work
   on a clean Windows install.
+- New **Home**: health score with checks, what can be cleaned by category,
+  drives, recent activity, space freed per week and a quick clean button.
+- First-run wizard (language, theme, behaviour) and a loading screen.
+- System tray: minimizing closes the window and leaves RCleaner in the tray
+  using a few MB of memory; reopening restores it.
+- Background mode: analyzes periodically (read-only) and shows a Windows
+  notification when the safe junk passes a threshold. Optional start with
+  Windows.
+- Single instance: opening RCleaner again brings up the running window.
+- Option to always run as administrator.
+- Right-click menus everywhere (rows, charts, drives, text fields) instead of
+  the WebView menu: open, show in Explorer, copy path, add to or remove from
+  exclusions, mark for deletion.
+- Excluded folders are shown in their own colour in Space and the results.
+- Deleting shows the path being removed and its progress; after a cleanup the
+  list of what was removed can be expanded.
+- Space and Duplicates ask on **Continue** whether to use the Recycle Bin or
+  delete permanently.
+- Deletion log (`deleted.log`) with everything RCleaner removed, viewable from
+  Settings and Home.
+- Mouse back/forward buttons and Alt+Left/Right navigate between views.
+- **About** page with project links and contributors.
+
+### Changed
+
+- "N more" in confirmation dialogs is clickable and shows the full list.
+- The radial chart and long folder paths adapt to small windows without
+  overlapping other elements.
 
 ### Security
 
 - Files Windows needs (hiberfil.sys, pagefile.sys, swapfile.sys, the registry,
   the Recycle Bin, Windows.old, base folders and system files) can never be
   deleted from Space or Duplicates.
+- System files are shown but locked even as administrator. They can only be
+  unlocked with the "Allow system files" setting, and every such selection
+  asks the user to accept responsibility first.
+- `#![forbid(unsafe_code)]` in every crate except `crp-platform`, the only one
+  that calls the Windows API.
 
 [Unreleased]: https://github.com/CristopherPaiz/RCleaner/commits/main

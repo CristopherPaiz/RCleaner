@@ -26,6 +26,8 @@
   --ok: #3ddc97;
   --warn: #f5b84a;
   --bad: #ff6b6b;
+  /* Exclusiones del usuario. */
+  --excl: #2dd4bf;
 
   /* Colores de sección (por defecto: Resumen). */
   --a: #3d8bff;
@@ -56,6 +58,7 @@
     --ok: #0f9d68;
     --warn: #b7791f;
     --bad: #d64545;
+    --excl: #0d9488;
   }
 }
 :root[data-theme="light"] {
@@ -73,6 +76,7 @@
   --ok: #0f9d68;
   --warn: #b7791f;
   --bad: #d64545;
+  --excl: #0d9488;
 }
 
 /* Los colores de sección son animables: al cambiar de sección o de modo,
@@ -86,6 +90,7 @@
 [data-section="space"] { --a: #7c6cff; --b: #d46cf0; }
 [data-section="dupes"] { --a: #ff8f3f; --b: #ff5f7e; }
 [data-section="settings"] { --a: #7d8597; --b: #b9c0cf; }
+[data-section="about"] { --a: #f0567a; --b: #ffb36b; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
@@ -99,6 +104,9 @@ p { margin: 0; }
 .faint { color: var(--text-3); }
 .mono { font-family: var(--mono); font-size: 12px; }
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Rutas: se recorta el principio, que es lo que menos dice. */
+.ellipsis.path { direction: rtl; text-align: left; }
+.ellipsis.path > bdi { direction: ltr; unicode-bidi: isolate; }
 
 /* Scroll discreto */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -179,6 +187,7 @@ input[type="checkbox"]:disabled { opacity: 0.35; cursor: default; }
   background: var(--raise); border: 1px solid var(--line-2); border-radius: 16px;
   padding: 24px; box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.6); animation: pop 0.16s ease-out;
 }
+.dialog.wide { width: min(760px, 94vw); }
 .dialog h2 { font-size: 20px; margin-bottom: 8px; }
 .dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 

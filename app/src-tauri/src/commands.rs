@@ -1,20 +1,52 @@
 //! Comandos expuestos al frontend. Todo el trabajo pesado corre en hilos de
 //! bloqueo para no congelar la ventana; el progreso se emite como evento.
 
-use crate::state::{AppState, lock};
+use crate::state::{AppState, BackgroundStatus, lock};
 use crp_core::context::default_dev_roots;
-use crp_core::settings::{append_history, load_history};
+use crp_core::settings::{
+    append_deletions, append_history, load_deletions, load_history, unix_now,
+};
 use crp_core::{
-    CleanOptions, CleanReport, Env, HistoryEntry, Mode, ModuleMeta, ProgressEvent, ScanReport,
-    Settings, modes, t, tf,
+    Background, CancelToken, CleanOptions, CleanReport, DeletionRecord, Env, HistoryEntry, Mode,
+    ModuleMeta, ProgressEvent, ScanReport, Settings, modes, t, tf,
 };
 use serde::Serialize;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
 
 const PROGRESS_EVENT: &str = "crp://progress";
+/// Ruta que se está eliminando ahora mismo (`{ "path": … }`).
+pub const NOW_EVENT: &str = "crp://now";
+
+/// Mientras `running`, emite cada 100 ms la ruta anotada en `token`.
+pub fn now_ticker(app: AppHandle, token: CancelToken) -> Arc<AtomicBool> {
+    #[derive(Serialize, Clone)]
+    struct Now {
+        path: Option<PathBuf>,
+    }
+    let running = Arc::new(AtomicBool::new(true));
+    let flag = running.clone();
+    std::thread::spawn(move || {
+        let mut last = None;
+        while flag.load(Ordering::Relaxed) {
+            let path = token.current();
+            if path != last {
+                let _ = app.emit(NOW_EVENT, Now { path: path.clone() });
+                last = path;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let _ = app.emit(NOW_EVENT, Now { path: None });
+    });
+    running
+}
 
 type CmdResult<T> = Result<T, String>;
 
@@ -78,6 +110,41 @@ pub fn history(state: State<'_, AppState>) -> Vec<HistoryEntry> {
     load_history(&state.paths.history_file())
 }
 
+/// Registro de lo eliminado, lo más reciente primero.
+#[tauri::command]
+pub fn deletions(state: State<'_, AppState>, limit: Option<usize>) -> Vec<DeletionRecord> {
+    load_deletions(
+        &state.paths.deletions_file(),
+        limit.unwrap_or(500).min(10_000),
+    )
+}
+
+/// Último análisis en segundo plano (si lo hubo).
+#[tauri::command]
+pub fn background_status(state: State<'_, AppState>) -> Option<BackgroundStatus> {
+    *lock(&state.background)
+}
+
+#[derive(Serialize)]
+pub struct RecycleBin {
+    bytes: u64,
+    items: u64,
+}
+
+/// Tamaño de la papelera de reciclaje (todas las unidades).
+#[tauri::command]
+pub fn recycle_bin() -> Option<RecycleBin> {
+    crp_platform::recycle_bin::query().ok().map(|r| RecycleBin {
+        bytes: r.bytes,
+        items: r.items,
+    })
+}
+
+/// Guarda lo eliminado en el registro (no interrumpe si falla).
+pub fn log_deletions(state: &AppState, records: &[DeletionRecord]) {
+    let _ = append_deletions(&state.paths.deletions_file(), records);
+}
+
 // ── Modos y módulos ────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
@@ -118,7 +185,11 @@ pub fn get_settings(state: State<'_, AppState>) -> Settings {
 }
 
 #[tauri::command]
-pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResult<()> {
+pub fn save_settings(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    settings: Settings,
+) -> CmdResult<()> {
     let clean = |paths: Vec<PathBuf>| -> Vec<PathBuf> {
         let mut seen = HashSet::new();
         paths
@@ -133,9 +204,29 @@ pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResul
         default_mode: settings.default_mode,
         language: settings.language.filter(|l| !l.is_empty()),
         theme: settings.theme.filter(|t| t == "light" || t == "dark"),
+        always_admin: settings.always_admin,
+        tray: settings.tray,
+        autostart: settings.autostart,
+        background: Background {
+            enabled: settings.background.enabled,
+            every_hours: settings.background.every_hours.clamp(1, 168),
+            threshold_mb: settings.background.threshold_mb.clamp(50, 1024 * 1024),
+        },
+        allow_system: settings.allow_system,
+        onboarded: settings.onboarded,
     };
+    let previous = lock(&state.settings).clone();
+    if previous.autostart != settings.autostart {
+        let launcher = app.autolaunch();
+        let r = if settings.autostart {
+            launcher.enable()
+        } else {
+            launcher.disable()
+        };
+        r.map_err(|e| tf("app.autostart_failed", &[("error", &e)]))?;
+    }
     settings.save(&state.paths.settings_file()).map_err(err)?;
-    let language_changed = lock(&state.settings).language != settings.language;
+    let language_changed = previous.language != settings.language;
     if language_changed {
         crate::state::apply_language(&settings);
         // Los nombres de módulos y hallazgos se generan en el idioma activo.
@@ -143,6 +234,9 @@ pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResul
         lock(&state.last_scan).clear();
     }
     *lock(&state.settings) = settings;
+    if language_changed {
+        crate::tray::refresh_menu(&app);
+    }
     Ok(())
 }
 
@@ -167,6 +261,7 @@ pub async fn scan(
     state: State<'_, AppState>,
     selectors: Vec<String>,
 ) -> CmdResult<ScanReport> {
+    let _busy = state.busy();
     let engine = lock(&state.engine).clone();
     let ctx = state.fresh_context();
     let report = tauri::async_runtime::spawn_blocking(move || {
@@ -200,18 +295,39 @@ pub async fn clean(
         return Err(t("app.stale_scan"));
     }
 
+    let _busy = state.busy();
     let engine = lock(&state.engine).clone();
     let ctx = state.fresh_context();
+    let ticker = now_ticker(app.clone(), ctx.cancel.clone());
+    let cleaned = findings.clone();
     let report = tauri::async_runtime::spawn_blocking(move || {
         let sink = move |e: ProgressEvent| {
             let _ = app.emit(PROGRESS_EVENT, e);
         };
         engine.clean(&findings, CleanOptions { dry_run }, &ctx, &sink)
     })
-    .await
-    .map_err(err)?;
+    .await;
+    ticker.store(false, Ordering::Relaxed);
+    let report = report.map_err(err)?;
 
     if !dry_run {
+        let now = unix_now();
+        let records: Vec<DeletionRecord> = report
+            .outcomes
+            .iter()
+            .filter(|o| o.freed_bytes > 0 || o.removed_items > 0)
+            .filter_map(|o| {
+                let f = cleaned.iter().find(|f| f.id == o.finding_id)?;
+                Some(DeletionRecord {
+                    timestamp: now,
+                    source: "clean".into(),
+                    path: f.path.clone().unwrap_or_else(|| PathBuf::from(&f.label)),
+                    bytes: o.freed_bytes,
+                    permanent: true,
+                })
+            })
+            .collect();
+        log_deletions(&state, &records);
         let entry = HistoryEntry::now(
             mode_name,
             report.freed_bytes(),
@@ -232,6 +348,7 @@ pub fn cancel(state: State<'_, AppState>, task: Option<String>) {
     let slot = match task.as_deref() {
         Some("disk") => &state.disk_cancel,
         Some("dupes") => &state.dupes_cancel,
+        Some("delete") => &state.delete_cancel,
         _ => &state.cancel,
     };
     lock(slot).cancel();
@@ -251,10 +368,56 @@ pub fn reveal(state: State<'_, AppState>, path: PathBuf) -> CmdResult<()> {
     crate::space::open_in_explorer(&path)
 }
 
-/// Relanza la app como administrador y cierra esta instancia.
+/// Ruta de un hallazgo del último análisis (para copiarla o excluirla).
+#[tauri::command]
+pub fn finding_path(state: State<'_, AppState>, id: String) -> Option<PathBuf> {
+    lock(&state.last_scan)
+        .iter()
+        .find(|f| f.id == id)
+        .and_then(|f| f.path.clone())
+}
+
+const REPO: &str = "https://github.com/CristopherPaiz/RCleaner";
+
+/// Abre en el navegador una página del proyecto. Sólo destinos conocidos:
+/// `repo`, `issues`, `releases`, `license`, `contributors`, `user:<login>`.
+#[tauri::command]
+pub fn open_link(app: AppHandle, target: String) -> CmdResult<()> {
+    let url = match target.as_str() {
+        "repo" => REPO.to_owned(),
+        "issues" => format!("{REPO}/issues"),
+        "new_issue" => format!("{REPO}/issues/new/choose"),
+        "releases" => format!("{REPO}/releases"),
+        "license" => format!("{REPO}/blob/main/LICENSE"),
+        "contributors" => format!("{REPO}/graphs/contributors"),
+        "changelog" => format!("{REPO}/blob/main/CHANGELOG.md"),
+        other => match other.strip_prefix("user:") {
+            Some(login)
+                if !login.is_empty()
+                    && login.len() <= 39
+                    && login.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') =>
+            {
+                format!("https://github.com/{login}")
+            }
+            _ => return Err(t("app.unknown_link")),
+        },
+    };
+    app.opener().open_url(url, None::<&str>).map_err(err)
+}
+
+/// Cierra la ventana y deja RCleaner en la bandeja.
+#[tauri::command]
+pub fn to_tray(app: AppHandle) {
+    crate::tray::hide(&app);
+}
+
+/// Relanza la app como administrador y cierra esta instancia. La nueva espera
+/// a que esta termine (si no, la instancia única la cerraría).
 #[tauri::command]
 pub fn restart_as_admin(app: AppHandle) -> CmdResult<()> {
-    crp_platform::relaunch_elevated(&[]).map_err(|e| tf("app.elevate_failed", &[("error", &e)]))?;
+    let args = [crate::WAIT_ARG.to_owned(), std::process::id().to_string()];
+    crp_platform::relaunch_elevated(&args)
+        .map_err(|e| tf("app.elevate_failed", &[("error", &e)]))?;
     app.exit(0);
     Ok(())
 }
