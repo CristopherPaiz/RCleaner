@@ -1,0 +1,66 @@
+# Modos incluidos en Clean-CRP.
+# Selectores: "id.exacto", "categoria.*", "*" (todo) y "!selector" (excluir).
+# Para crear modos propios copia este formato a %APPDATA%\CleanCRP\modes\mi-modo.toml
+
+[[mode]]
+id = "rapido"
+name = "Rápido"
+icon = "zap"
+description = "Temporales, miniaturas, informes de errores, cachés de navegador y papelera. Seguro para cualquiera."
+modules = [
+  "system.user_temp",
+  "system.thumbnails",
+  "system.wer",
+  "system.crash_dumps",
+  "system.shader_cache",
+  "system.recycle_bin",
+  "browser.*",
+]
+
+[[mode]]
+id = "programador"
+name = "Programador"
+icon = "code"
+description = "Todo lo de Rápido más cachés de pip/uv/npm/pnpm/cargo/gradle/NuGet/Go, editores, artefactos de proyectos (node_modules, target, __pycache__) y modelos de IA."
+modules = [
+  "system.user_temp",
+  "system.thumbnails",
+  "system.wer",
+  "system.crash_dumps",
+  "system.shader_cache",
+  "system.recycle_bin",
+  "browser.*",
+  "dev.*",
+  "ai.*",
+]
+
+[[mode]]
+id = "ia"
+name = "IA / ML"
+icon = "brain"
+description = "Modelos descargados (Ollama, Hugging Face, LM Studio, Torch) y cachés de Python."
+modules = ["ai.*", "dev.pip", "dev.uv", "dev.conda", "dev.poetry"]
+
+[[mode]]
+id = "gamer"
+name = "Gamer"
+icon = "gamepad"
+description = "Rápido + cachés de shaders, Delivery Optimization y descargas de Windows Update."
+modules = [
+  "system.user_temp",
+  "system.thumbnails",
+  "system.wer",
+  "system.crash_dumps",
+  "system.shader_cache",
+  "system.recycle_bin",
+  "system.delivery_optimization",
+  "system.windows_update",
+  "browser.*",
+]
+
+[[mode]]
+id = "profundo"
+name = "Profundo"
+icon = "layers"
+description = "Todos los módulos. Revisa los elementos moderados y avanzados antes de limpiar."
+modules = ["*"]

@@ -1,0 +1,25 @@
+[package]
+name = "crp-modules"
+description = "Limpiadores de Clean-CRP: sistema, navegadores, desarrollo e IA."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+crp-core.workspace = true
+crp-platform.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

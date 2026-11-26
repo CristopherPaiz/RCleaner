@@ -1,0 +1,23 @@
+[package]
+name = "clean-crp"
+description = "Clean-CRP: limpiador y mantenimiento modular para Windows"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
+[dependencies]
+crp-core.workspace = true
+crp-modules.workspace = true
+crp-platform.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2.11", features = [] }
+tauri-plugin-dialog = "2.7"
+
+[lints]
+workspace = true

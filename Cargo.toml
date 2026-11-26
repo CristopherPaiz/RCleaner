@@ -1,0 +1,52 @@
+[workspace]
+resolver = "3"
+# La app Tauri necesita el frontend compilado (app/dist); por eso no está en
+# default-members: `cargo build/test` a secas sólo compila las crates.
+members = ["crates/*", "app/src-tauri"]
+default-members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+crp-core = { path = "crates/crp-core" }
+crp-platform = { path = "crates/crp-platform" }
+crp-modules = { path = "crates/crp-modules" }
+
+anyhow = "1"
+clap = { version = "4.6", features = ["derive"] }
+dirs = "7"
+glob = "0.3"
+humansize = "2.1"
+rayon = "1.12"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+thiserror = "2"
+toml = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+walkdir = "2.5"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
