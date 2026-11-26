@@ -10,7 +10,7 @@
 | Build Tools de Visual Studio | 2022+ con "Desarrollo para el escritorio con C++" | `winget install Microsoft.VisualStudio.2022.BuildTools` |
 | Node.js | 20 LTS o superior | `winget install OpenJS.NodeJS.LTS` |
 | Tauri CLI | 2.x | `cargo install tauri-cli --version "^2" --locked` |
-| WebView2 | runtime | Ya viene en Windows 10 21H2+/11 |
+| WebView2 | runtime | Sólo para desarrollar; los instaladores traen el suyo (abajo) |
 
 WiX (para MSI) y NSIS (para EXE) **no hace falta instalarlos**: la CLI de Tauri
 los descarga sola la primera vez que generas un bundle (necesita internet).
@@ -65,6 +65,21 @@ Equivale a `cd app; cargo tauri build`. Resultados:
 
 El perfil `release` usa LTO completo, `codegen-units = 1` y `strip` para un
 binario pequeño.
+
+### Instaladores autónomos
+RCleaner debe funcionar en cualquier Windows 10/11, aunque esté recién
+instalado y sin internet. Dos cosas que usa no están garantizadas, así que el
+build las incluye:
+
+- **WebView2** (el motor de Edge con el que Tauri dibuja la interfaz):
+  `webviewInstallMode` es `offlineInstaller`, así que el MSI/EXE llevan el
+  instalador completo de WebView2 (los instaladores pasan a ~285 MB) y lo instalan en silencio sólo
+  si el PC no lo tiene. Después Microsoft lo mantiene actualizado.
+- **Runtime de Visual C++**: `.cargo/config.toml` lo enlaza dentro del `.exe`
+  (`+crt-static`), sin pedir el "Visual C++ Redistributable".
+
+El `rcleaner.exe` portable, suelto, sí necesita WebView2 (viene en todo
+Windows 11 y Windows 10 actualizado); para ir seguro, usa los instaladores.
 
 ### Versión
 Se toma de `[workspace.package] version` en el `Cargo.toml` raíz. Cambia sólo ahí.

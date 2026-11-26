@@ -11,7 +11,11 @@
   import ActionButton from "../components/ActionButton.svelte";
   import Dock from "../components/Dock.svelte";
   import Icon from "../components/Icon.svelte";
+  import FileIcon from "../components/FileIcon.svelte";
+  import { fileKey, folderSvg } from "../lib/icons.svelte";
   import Sunburst from "../components/Sunburst.svelte";
+  import Treemap from "../components/Treemap.svelte";
+  import { extColor, rgb } from "../lib/treemap";
   import Modal from "../components/Modal.svelte";
 
   const RINGS = 4;
@@ -28,6 +32,8 @@
   const current = $derived(space.crumbs.at(-1));
   const maxEntry = $derived(space.entries[0]?.size || 1);
   const maxExt = $derived(space.summary?.extensions[0]?.bytes || 1);
+  /** Puesto de cada extensión por espacio total: decide su color en el mapa. */
+  const ranks = $derived(new Map((space.summary?.extensions ?? []).map((x, i) => [x.ext, i])));
   const scanned = $derived(splitBytes(space.progress.bytes));
   const now = Date.now() / 1000;
 
@@ -70,7 +76,7 @@
         {@const used = d.total_bytes - d.free_bytes}
         {@const pct = d.total_bytes ? used / d.total_bytes : 0}
         <button class="drive" onclick={() => space.scan(d.root)}>
-          <span class="d-ic"><Icon name="drive" size={20} /></span>
+          <span class="d-ic"><FileIcon key="drive:{d.root}" fallback="drive" size={22} /></span>
           <span class="d-main">
             <span class="d-name">{d.label || t("ui.common.local_disk")} <span class="faint">({d.root.replace("\\", "")})</span></span>
             <span class="d-bar"><span style:width="{pct * 100}%" class:full={pct > 0.9}></span></span>
@@ -104,11 +110,20 @@
         </button>
       {/each}
     </nav>
-    <button class="btn quiet small" onclick={() => space.reset()}><Icon name="refresh" size={14} /> {t("ui.space.other_drive")}</button>
+    <div class="bar-acts">
+      <div class="segmented small" role="group" aria-label={t("ui.space.chart_aria")}>
+        <button class:on={space.chart === "radial"} onclick={() => space.setChart("radial")}><Icon name="pie" size={13} /> {t("ui.space.chart_radial")}</button>
+        <button class:on={space.chart === "map"} onclick={() => space.setChart("map")}><Icon name="grid" size={13} /> {t("ui.space.chart_map")}</button>
+      </div>
+      <button class="btn quiet small" onclick={() => space.reset()}><Icon name="refresh" size={14} /> {t("ui.space.other_drive")}</button>
+    </div>
   </header>
 
-  <div class="split">
-    <div class="chart">
+  <div class="split" class:wide={space.chart === "map"}>
+    <div class="chart" class:map={space.chart === "map"}>
+      {#if space.chart === "map" && space.treemap}
+        <Treemap data={space.treemap} {ranks} onopen={(id) => space.open(id)} highlight={hoverId} />
+      {:else}
       <Sunburst
         view={space.view}
         rings={RINGS}
@@ -117,6 +132,7 @@
         onup={() => space.up()}
         highlight={hoverId}
       />
+      {/if}
     </div>
 
     <aside class="panel">
@@ -132,7 +148,13 @@
             <div class="row" role="listitem" onmouseenter={() => (hoverId = e.id)} onmouseleave={() => (hoverId = null)}>
               <span class="sw" style:background={colors.get(e.id) ?? "var(--line-2)"}></span>
               <button class="name" disabled={e.kind !== "dir"} onclick={() => space.open(e.id)}>
-                <Icon name={e.kind === "dir" ? "folder" : e.kind === "link" ? "link" : fileIcon(e.name)} size={15} />
+                {#if e.kind === "dir"}
+                  <FileIcon src={folderSvg(e.name)} key="node:{e.id}" fallback="folder" size={16} />
+                {:else if e.kind === "link"}
+                  <Icon name="link" size={15} />
+                {:else}
+                  <FileIcon key={fileKey(e.name, `node:${e.id}`)} fallback={fileIcon(e.name)} size={16} />
+                {/if}
                 <span class="ellipsis">{e.name}</span>
               </button>
               <span class="share"><span style:width="{(e.size / maxEntry) * 100}%"></span></span>
@@ -160,7 +182,7 @@
           {#each space.largest as f (f.id)}
             {@const [dir] = splitPath(f.path)}
             <div class="row file">
-              <span class="f-ic"><Icon name={fileIcon(f.name)} size={16} /></span>
+              <span class="f-ic"><FileIcon key={fileKey(f.name, `node:${f.id}`)} fallback={fileIcon(f.name)} size={20} /></span>
               <span class="f-main">
                 <span class="ellipsis">{f.name}</span>
                 <span class="faint ellipsis small">{dir} · {f.modified ? formatAge(Math.floor((now - f.modified) / 86400)) : ""}</span>
@@ -189,7 +211,7 @@
           <p class="faint note">{t("ui.space.types_note")}</p>
           {#each space.summary.extensions as x (x.ext)}
             <div class="row type">
-              <span class="ext mono">{x.ext ? `.${x.ext}` : t("ui.space.no_ext")}</span>
+              <span class="ext mono"><span class="sw" style:background={rgb(extColor(ranks.get(x.ext) ?? -1))}></span><FileIcon key="ext:{x.ext}" fallback={fileIcon(`a.${x.ext}`)} size={16} />{x.ext ? `.${x.ext}` : t("ui.space.no_ext")}</span>
               <span class="share"><span style:width="{(x.bytes / maxExt) * 100}%"></span></span>
               <span class="faint num small">{formatCount(x.files)}</span>
               <span class="size num">{formatBytes(x.bytes)}</span>
@@ -287,6 +309,12 @@
 
   .split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 1.1fr) minmax(340px, 1fr); gap: 24px; padding: 8px 32px 0; }
   .chart { min-height: 0; display: grid; place-items: center; padding: 8px; }
+  .split.wide { grid-template-columns: minmax(360px, 1.7fr) minmax(340px, 1fr); }
+  .chart.map { display: block; padding: 0 0 12px; }
+  .bar-acts { display: flex; align-items: center; gap: 10px; }
+  .segmented.small button { font-size: 12px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; }
+  .ext { display: inline-flex; align-items: center; gap: 7px; min-width: 0; white-space: nowrap; overflow: hidden; }
+  .ext .sw { flex-shrink: 0; }
   .panel { min-height: 0; display: flex; flex-direction: column; gap: 10px; }
   .tabs { align-self: flex-start; }
   .rows { flex: 1; overflow: auto; margin-right: -10px; padding-right: 10px; }
@@ -296,7 +324,7 @@
   }
   .row:hover { background: var(--hover); }
   .row.file { grid-template-columns: 20px minmax(0, 1fr) 74px 64px; }
-  .row.type { grid-template-columns: 90px 1fr 60px 74px; }
+  .row.type { grid-template-columns: 148px 1fr 60px 74px; }
   .sw { width: 10px; height: 10px; border-radius: 3px; }
   .name { display: flex; align-items: center; gap: 8px; min-width: 0; border: 0; background: none; padding: 0; color: var(--text); cursor: pointer; text-align: left; }
   .name:disabled { cursor: default; color: var(--text-2); }

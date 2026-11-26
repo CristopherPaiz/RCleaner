@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod icons;
 mod space;
 mod state;
 
@@ -25,9 +26,11 @@ fn main() {
             commands::cancel,
             commands::reveal,
             commands::restart_as_admin,
+            icons::icons,
             space::disk_scan,
             space::disk_summary,
             space::disk_view,
+            space::disk_treemap,
             space::disk_children,
             space::disk_crumbs,
             space::disk_largest,

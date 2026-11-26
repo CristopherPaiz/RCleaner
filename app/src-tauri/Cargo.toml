@@ -11,6 +11,7 @@ publish.workspace = true
 tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
+base64 = "0.22"
 crp-core.workspace = true
 crp-disk.workspace = true
 crp-modules.workspace = true

@@ -1,6 +1,7 @@
 // Estado del buscador de duplicados.
 
 import { SvelteSet } from "svelte/reactivity";
+import { icons } from "./icons.svelte";
 import { api, type DeleteResult, type DupeGroup, type DupeProgress, type DupeReport } from "./api";
 
 export type DupesPhase = "idle" | "scanning" | "results";
@@ -57,6 +58,7 @@ class DupesStore {
     this.progress = { phase: "listing", files: 0 };
     try {
       this.report = await api.dupesScan(this.roots, this.minSize, this.includeSystem);
+      icons.forgetNodes();
       this.autoSelect(this.keep);
       this.phase = "results";
     } catch (e) {

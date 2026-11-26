@@ -143,6 +143,61 @@ pub struct FileEntry {
     pub protected: Option<String>,
 }
 
+/// Sin extensión conocida (carpetas y piezas "resto").
+pub const NO_EXT: u16 = u16::MAX;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TreemapKind {
+    Dir,
+    File,
+    /// Elementos demasiado pequeños para verse, agrupados.
+    Rest,
+}
+
+/// Árbol podado para el mapa de rectángulos, en columnas (JSON compacto).
+/// La pieza 0 es la raíz; `parent[i]` apunta a una pieza anterior.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct Treemap {
+    pub parent: Vec<u32>,
+    /// Id del nodo (`u32::MAX` en las piezas "resto").
+    pub id: Vec<NodeId>,
+    pub size: Vec<u64>,
+    pub name: Vec<String>,
+    pub kind: Vec<TreemapKind>,
+    /// Índice en `exts`, o [`NO_EXT`].
+    pub ext: Vec<u16>,
+    pub exts: Vec<String>,
+}
+
+impl Treemap {
+    fn push(
+        &mut self,
+        parent: u32,
+        id: NodeId,
+        size: u64,
+        name: &str,
+        kind: TreemapKind,
+        ext: u16,
+    ) -> u32 {
+        self.parent.push(parent);
+        self.id.push(id);
+        self.size.push(size);
+        self.name.push(name.to_owned());
+        self.kind.push(kind);
+        self.ext.push(ext);
+        (self.parent.len() - 1) as u32
+    }
+
+    pub fn len(&self) -> usize {
+        self.parent.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.parent.is_empty()
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Crumb {
     pub id: NodeId,
@@ -482,6 +537,61 @@ impl DiskTree {
         }
     }
 
+    /// Datos para el mapa de rectángulos (estilo WinDirStat) bajo `id`.
+    ///
+    /// Recorre por niveles y baja hasta los archivos mientras quepan
+    /// `max_items` piezas. Lo que ocupa menos de `min_fraction` del total se
+    /// junta en una pieza "resto" por carpeta: no llegaría a verse.
+    pub fn treemap(&self, id: NodeId, max_items: usize, min_fraction: f64) -> Option<Treemap> {
+        let root = self.node(id)?;
+        let threshold = ((root.size as f64) * min_fraction).max(1.0) as u64;
+        let mut out = Treemap::default();
+        let mut exts: HashMap<String, u16> = HashMap::new();
+        out.push(
+            NO_PARENT,
+            id,
+            root.size,
+            &root.name,
+            TreemapKind::Dir,
+            NO_EXT,
+        );
+        let mut queue = std::collections::VecDeque::from([(0u32, id)]);
+        while let Some((at, nid)) = queue.pop_front() {
+            let n = &self.nodes[nid as usize];
+            let mut rest = 0u64;
+            for &c in &n.children {
+                let cn = &self.nodes[c as usize];
+                if cn.size == 0 {
+                    continue;
+                }
+                if cn.size < threshold || out.len() >= max_items {
+                    rest += cn.size;
+                    continue;
+                }
+                let (kind, ext) = match cn.kind {
+                    Kind::Dir => (TreemapKind::Dir, NO_EXT),
+                    _ => {
+                        let e = extension(&cn.name);
+                        let next = exts.len() as u16;
+                        let code = *exts.entry(e.clone()).or_insert_with(|| {
+                            out.exts.push(e);
+                            next
+                        });
+                        (TreemapKind::File, code)
+                    }
+                };
+                let me = out.push(at, c, cn.size, &cn.name, kind, ext);
+                if cn.kind == Kind::Dir && !cn.children.is_empty() {
+                    queue.push_back((me, c));
+                }
+            }
+            if rest > 0 {
+                out.push(at, NO_PARENT, rest, "", TreemapKind::Rest, NO_EXT);
+            }
+        }
+        Some(out)
+    }
+
     /// Hijos directos (ya ordenados por tamaño), hasta `limit`.
     pub fn children(&self, id: NodeId, limit: usize) -> Vec<Entry> {
         let Some(n) = self.node(id) else {
@@ -637,6 +747,27 @@ mod tests {
         assert_eq!(crumbs[1..], ["big".to_string(), "inner".to_string()]);
         let top = t.largest_files(0, 2);
         assert_eq!(top.iter().map(|f| f.size).collect::<Vec<_>>(), [5000, 3000]);
+    }
+
+    #[test]
+    fn treemap_reaches_files_and_groups_tiny_ones() {
+        let (_dir, tree) = sample();
+        let tm = tree.treemap(0, 10_000, 0.0).unwrap();
+        assert_eq!(tm.parent[0], NO_PARENT);
+        assert_eq!(tm.size[0], tree.summary().bytes);
+        assert!(tm.kind.contains(&TreemapKind::File));
+        // Cada padre suma lo mismo que sus hijos.
+        for i in 0..tm.len() {
+            if tm.kind[i] == TreemapKind::Dir && tm.parent.contains(&(i as u32)) {
+                let kids: u64 = (0..tm.len())
+                    .filter(|&j| tm.parent[j] == i as u32)
+                    .map(|j| tm.size[j])
+                    .sum();
+                assert_eq!(kids, tm.size[i]);
+            }
+        }
+        let small = tree.treemap(0, 10_000, 0.9).unwrap();
+        assert!(small.kind.contains(&TreemapKind::Rest));
     }
 
     #[test]

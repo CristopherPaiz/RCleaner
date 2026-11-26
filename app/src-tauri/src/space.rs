@@ -9,7 +9,7 @@ use crp_core::{Env, path_within, safety, t, tf};
 use crp_disk::dupes::{DupeOptions, DupeProgress, DupeReport, find};
 use crp_disk::protect;
 use crp_disk::tree::{
-    Crumb, Entry, FileEntry, NodeId, ScanOptions, ScanProgress, Summary, ViewNode, scan,
+    Crumb, Entry, FileEntry, NodeId, ScanOptions, ScanProgress, Summary, Treemap, ViewNode, scan,
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -151,6 +151,14 @@ pub fn disk_view(state: State<'_, AppState>, id: NodeId, depth: u32) -> Option<V
     lock(&state.disk)
         .as_ref()
         .and_then(|t| t.view(id, depth.clamp(1, 8), 0.004))
+}
+
+/// Mapa de rectángulos bajo `id` (hasta archivos; lo diminuto, agrupado).
+#[tauri::command]
+pub fn disk_treemap(state: State<'_, AppState>, id: NodeId) -> Option<Treemap> {
+    lock(&state.disk)
+        .as_ref()
+        .and_then(|t| t.treemap(id, 50_000, 1.0 / 400_000.0))
 }
 
 #[tauri::command]

@@ -2,6 +2,7 @@
 // vista actual (nodo, anillos, lista) y la "bandeja" de lo que se va a borrar.
 
 import { SvelteMap } from "svelte/reactivity";
+import { icons } from "./icons.svelte";
 import {
   api,
   type Crumb,
@@ -10,11 +11,23 @@ import {
   type DiskFile,
   type DiskProgress,
   type DiskSummary,
+  type Treemap,
   type ViewNode,
 } from "./api";
 
 export type SpacePhase = "idle" | "scanning" | "results";
 export type SpaceTab = "folder" | "largest" | "types";
+export type SpaceChart = "radial" | "map";
+
+const CHART_KEY = "rcleaner.space.chart";
+
+function savedChart(): SpaceChart {
+  try {
+    return localStorage.getItem(CHART_KEY) === "map" ? "map" : "radial";
+  } catch {
+    return "radial";
+  }
+}
 
 const RINGS = 4;
 
@@ -36,6 +49,9 @@ class SpaceStore {
   crumbs = $state<Crumb[]>([]);
   largest = $state<DiskFile[]>([]);
   tab = $state<SpaceTab>("folder");
+  /** Mapa radial o de rectángulos (estilo WinDirStat). */
+  chart = $state<SpaceChart>(savedChart());
+  treemap = $state.raw<Treemap | null>(null);
 
   /** Elementos marcados para mover a la papelera. */
   readonly picks = new SvelteMap<number, Pick>();
@@ -64,6 +80,7 @@ class SpaceStore {
     this.lastDelete = null;
     try {
       this.summary = await api.diskScan(path);
+      icons.forgetNodes();
       this.tab = "folder";
       await this.open(this.summary.root);
       this.phase = "results";
@@ -91,6 +108,21 @@ class SpaceStore {
     this.entries = entries;
     this.crumbs = crumbs;
     this.largest = this.tab === "largest" ? await api.diskLargest(id) : [];
+    this.treemap = this.chart === "map" ? await api.diskTreemap(id) : null;
+  }
+
+  async setChart(chart: SpaceChart) {
+    this.chart = chart;
+    try {
+      localStorage.setItem(CHART_KEY, chart);
+    } catch {
+      /* sin almacenamiento: sólo esta sesión */
+    }
+    try {
+      this.treemap = chart === "map" ? await api.diskTreemap(this.node) : null;
+    } catch (e) {
+      this.error = String(e);
+    }
   }
 
   async setTab(tab: SpaceTab) {

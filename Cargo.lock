@@ -620,6 +620,7 @@ dependencies = [
 name = "crp-platform"
 version = "0.1.0"
 dependencies = [
+ "png 0.18.1",
  "windows-sys 0.61.2",
 ]
 
@@ -2586,6 +2587,7 @@ dependencies = [
 name = "rcleaner"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "crp-core",
  "crp-disk",
  "crp-modules",

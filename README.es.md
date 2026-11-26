@@ -55,7 +55,8 @@ en [docs/MODULES.es.md](docs/MODULES.es.md).
 ## Instalar
 
 Descarga el instalador **MSI** o **EXE** más reciente desde la página de
-Releases. Necesita Windows 10/11 con WebView2 (ya viene en Windows 11).
+Releases. Funciona en Windows 10 y 11 sin internet ni descargas extra: el
+instalador trae todo lo que necesita (ver [docs/BUILD.es.md](docs/BUILD.es.md#instaladores-autónomos)).
 
 Tus ajustes están en `%APPDATA%\RCleaner\` (`settings.json`, `history.json`,
 `modes\*.toml`).
@@ -121,3 +122,8 @@ Hacia dónde vamos: [docs/ROADMAP.es.md](docs/ROADMAP.es.md).
 ## Licencia
 
 [MIT](LICENSE)
+
+Los iconos de carpetas de desarrollo vienen de
+[Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
+(MIT, ver `app/src/assets/folders/`). El resto de iconos de archivos y apps se
+leen de Windows en el PC del usuario; no se incluye ninguno.

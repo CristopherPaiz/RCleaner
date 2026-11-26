@@ -126,6 +126,18 @@ export interface DiskSummary {
   extensions: { ext: string; bytes: number; files: number }[];
 }
 
+/** Árbol podado para el mapa de rectángulos (columnas; pieza 0 = raíz). */
+export interface Treemap {
+  parent: number[];
+  id: number[];
+  size: number[];
+  name: string[];
+  kind: ("dir" | "file" | "rest")[];
+  /** Índice en `exts` o 65535. */
+  ext: number[];
+  exts: string[];
+}
+
 export interface ViewNode {
   id: number | null;
   name: string;
@@ -226,6 +238,7 @@ export const api = {
   diskScan: (path: string) => invoke<DiskSummary>("disk_scan", { path }),
   diskSummary: () => invoke<DiskSummary | null>("disk_summary"),
   diskView: (id: number, depth: number) => invoke<ViewNode | null>("disk_view", { id, depth }),
+  diskTreemap: (id: number) => invoke<Treemap | null>("disk_treemap", { id }),
   diskChildren: (id: number) => invoke<DiskEntry[]>("disk_children", { id }),
   diskCrumbs: (id: number) => invoke<Crumb[]>("disk_crumbs", { id }),
   diskLargest: (id: number) => invoke<DiskFile[]>("disk_largest", { id }),
@@ -238,6 +251,7 @@ export const api = {
     invoke<DupeReport>("dupes_scan", { roots, minSize, includeSystem }),
   dupesReport: () => invoke<DupeReport | null>("dupes_report"),
   dupesReveal: (id: number) => invoke<void>("dupes_reveal", { id }),
+  icons: (keys: string[]) => invoke<Record<string, string>>("icons", { keys }),
   dupesDelete: (ids: number[]) => invoke<DeleteResult>("dupes_delete", { ids }),
   onDupesProgress: (cb: (p: DupeProgress) => void): Promise<UnlistenFn> =>
     listen<DupeProgress>("crp://dupes", (e) => cb(e.payload)),

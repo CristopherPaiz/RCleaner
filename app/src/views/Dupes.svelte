@@ -9,6 +9,8 @@
   import OrbButton from "../components/OrbButton.svelte";
   import ActionButton from "../components/ActionButton.svelte";
   import Dock from "../components/Dock.svelte";
+  import FileIcon from "../components/FileIcon.svelte";
+  import { fileKey } from "../lib/icons.svelte";
   import Icon from "../components/Icon.svelte";
   import Modal from "../components/Modal.svelte";
 
@@ -145,7 +147,7 @@
     {#each groups.slice(0, shown) as g, gi (g.files[0].id)}
       <section style:animation-delay="{Math.min(gi, 12) * 25}ms">
         <div class="g-head">
-          <span class="g-ic"><Icon name={fileIcon(title(g))} size={18} /></span>
+          <span class="g-ic"><FileIcon key={fileKey(title(g), `dupe:${g.files[0].id}`)} fallback={fileIcon(title(g))} size={20} /></span>
           <span class="g-title ellipsis">{title(g)}</span>
           <span class="faint num">{g.files.length} × {formatBytes(g.size)}</span>
         </div>

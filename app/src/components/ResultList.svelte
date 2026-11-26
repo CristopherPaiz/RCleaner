@@ -9,6 +9,8 @@
   import { CATEGORY_ICON, CATEGORY_ORDER, categoryLabel, riskLabel, formatAge, formatBytes } from "../lib/format";
   import { t, tn } from "../lib/i18n.svelte";
   import Icon from "./Icon.svelte";
+  import FileIcon from "./FileIcon.svelte";
+  import { folderSvg } from "../lib/icons.svelte";
 
   interface Props {
     report: ScanReport;
@@ -23,6 +25,15 @@
   );
 
   const moduleName = (id: string) => app.modules.find((m) => m.id === id)?.name ?? id;
+
+  /** Icono de un hallazgo: carpeta conocida, si no la app del limpiador. */
+  function findingIcon(f: Finding): { src?: string; key?: string } {
+    const last = f.path?.split("\\").filter(Boolean).pop();
+    const src = last ? folderSvg(last) : undefined;
+    if (src) return { src };
+    const proc = app.modules.find((m) => m.id === f.module_id)?.processes[0];
+    return proc ? { key: `app:${proc}` } : {};
+  }
 
   const groups = $derived.by(() => {
     const q = query.trim().toLowerCase();
@@ -103,6 +114,7 @@
         <div class="items">
           {#each g.items as f (f.id)}
             {@const off = !app.selectable(f)}
+            {@const ic = findingIcon(f)}
             <div class="row" class:off>
               <input
                 type="checkbox"
@@ -111,6 +123,7 @@
                 onchange={() => toggle(f)}
                 aria-label={f.label}
               />
+              <span class="f-ic"><FileIcon src={ic.src} key={ic.key} fallback={CATEGORY_ICON[f.category]} size={20} /></span>
               <div class="main">
                 <div class="label ellipsis">{f.label}</div>
                 <div class="detail ellipsis faint">
@@ -173,12 +186,13 @@
 
   .items { padding: 0 0 10px 58px; }
   .row {
-    display: grid; grid-template-columns: 18px 1fr 92px 84px 30px; gap: 14px; align-items: center;
+    display: grid; grid-template-columns: 18px 22px 1fr 92px 84px 30px; gap: 12px; align-items: center;
     padding: 9px 10px; border-radius: 9px;
   }
   .row:hover { background: var(--hover); }
   .row.off { opacity: 0.55; }
   .main { min-width: 0; }
+  .f-ic { display: grid; place-items: center; color: var(--text-3); }
   .label { font-weight: 500; }
   .detail { font-size: 12px; }
   .age { color: var(--text-2); }

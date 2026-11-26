@@ -55,7 +55,8 @@ environments). The full list is in [docs/MODULES.md](docs/MODULES.md).
 ## Install
 
 Download the latest **MSI** or **EXE** installer from the Releases page.
-RCleaner needs Windows 10/11 with WebView2 (already part of Windows 11).
+Works on Windows 10 and 11 without internet or extra downloads: the installer
+brings everything it needs (see [docs/BUILD.md](docs/BUILD.md#self-contained-installers)).
 
 Your settings live in `%APPDATA%\RCleaner\` (`settings.json`, `history.json`,
 `modes\*.toml`).
@@ -124,3 +125,8 @@ Where things are going: [docs/ROADMAP.md](docs/ROADMAP.md).
 ## License
 
 [MIT](LICENSE)
+
+Folder icons for development folders come from
+[Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
+(MIT, see `app/src/assets/folders/`). All other file and app icons are read
+from Windows on the user's PC; none are bundled.

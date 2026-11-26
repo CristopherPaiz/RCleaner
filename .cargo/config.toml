@@ -1,0 +1,8 @@
+# El runtime de C de Microsoft (vcruntime140.dll) va dentro de cada .exe:
+# RCleaner funciona en un Windows recién instalado, sin pedir el
+# "Visual C++ Redistributable".
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
