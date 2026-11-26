@@ -13,6 +13,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-26
+
 ### Changed
 
 - Installers are now a few MB instead of ~285 MB: they no longer carry the
@@ -75,5 +77,6 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 - `#![forbid(unsafe_code)]` in every crate except `crp-platform`, the only one
   that calls the Windows API.
 
-[Unreleased]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CristopherPaiz/RCleaner/releases/tag/v0.1.0
