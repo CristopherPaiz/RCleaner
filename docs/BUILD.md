@@ -10,7 +10,7 @@ English · [Español](BUILD.es.md)
 | Visual Studio Build Tools | 2022+ with "Desktop development with C++" | `winget install Microsoft.VisualStudio.2022.BuildTools` |
 | Node.js | 20 LTS or newer | `winget install OpenJS.NodeJS.LTS` |
 | Tauri CLI | 2.x | `cargo install tauri-cli --version "^2" --locked` |
-| WebView2 | runtime | For development only; installers bring their own (below) |
+| WebView2 | runtime | Already on Windows 10/11; installers add it if missing (below) |
 
 You **don't need to install** WiX (for MSI) or NSIS (for EXE): the Tauri CLI
 downloads them the first time you build a bundle (needs internet).
@@ -67,13 +67,15 @@ The `release` profile uses full LTO, `codegen-units = 1` and `strip` for a
 small binary.
 
 ### Self-contained installers
-RCleaner must work on any Windows 10/11 PC, even offline and freshly installed.
-Two things it uses are not guaranteed to be there, so the build ships them:
+RCleaner must work on any Windows 10/11 PC, even freshly installed. Two things
+it uses are not guaranteed to be there, so the installers take care of them:
 
-- **WebView2** (the Edge engine Tauri draws the UI with): `webviewInstallMode`
-  is `offlineInstaller`, so the MSI/EXE carry the full WebView2 installer
-  (installers grow to ~285 MB) and install it silently only if the PC lacks it. Microsoft
-  keeps it updated afterwards.
+- **WebView2** (the Edge engine Tauri draws the UI with): it ships with
+  Windows 11 and up-to-date Windows 10. `webviewInstallMode` is
+  `embedBootstrapper`: the MSI/EXE carry only Microsoft's small bootstrapper
+  (~2 MB) and, if the PC lacks WebView2, download and install it silently
+  (that rare case needs internet). This keeps the installers at a few MB;
+  `offlineInstaller` would make them ~285 MB.
 - **Visual C++ runtime**: `.cargo/config.toml` links it statically
   (`+crt-static`), so no "Visual C++ Redistributable" is needed.
 

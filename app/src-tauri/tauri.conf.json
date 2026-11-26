@@ -41,7 +41,7 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "webviewInstallMode": { "type": "offlineInstaller", "silent": true },
+      "webviewInstallMode": { "type": "embedBootstrapper", "silent": true },
       "wix": { "language": "es-ES" },
       "nsis": { "languages": ["Spanish"], "displayLanguageSelector": false }
     }

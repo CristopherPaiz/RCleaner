@@ -10,7 +10,7 @@
 | Build Tools de Visual Studio | 2022+ con "Desarrollo para el escritorio con C++" | `winget install Microsoft.VisualStudio.2022.BuildTools` |
 | Node.js | 20 LTS o superior | `winget install OpenJS.NodeJS.LTS` |
 | Tauri CLI | 2.x | `cargo install tauri-cli --version "^2" --locked` |
-| WebView2 | runtime | Sólo para desarrollar; los instaladores traen el suyo (abajo) |
+| WebView2 | runtime | Ya viene en Windows 10/11; los instaladores lo añaden si falta (abajo) |
 
 WiX (para MSI) y NSIS (para EXE) **no hace falta instalarlos**: la CLI de Tauri
 los descarga sola la primera vez que generas un bundle (necesita internet).
@@ -68,13 +68,15 @@ binario pequeño.
 
 ### Instaladores autónomos
 RCleaner debe funcionar en cualquier Windows 10/11, aunque esté recién
-instalado y sin internet. Dos cosas que usa no están garantizadas, así que el
-build las incluye:
+instalado. Dos cosas que usa no están garantizadas, así que los instaladores
+se encargan de ellas:
 
-- **WebView2** (el motor de Edge con el que Tauri dibuja la interfaz):
-  `webviewInstallMode` es `offlineInstaller`, así que el MSI/EXE llevan el
-  instalador completo de WebView2 (los instaladores pasan a ~285 MB) y lo instalan en silencio sólo
-  si el PC no lo tiene. Después Microsoft lo mantiene actualizado.
+- **WebView2** (el motor de Edge con el que Tauri dibuja la interfaz): viene
+  con Windows 11 y con Windows 10 actualizado. `webviewInstallMode` es
+  `embedBootstrapper`: el MSI/EXE llevan sólo el pequeño instalador de
+  Microsoft (~2 MB) y, si el PC no tiene WebView2, lo descargan e instalan en
+  silencio (ese caso raro necesita internet). Así los instaladores pesan unos
+  pocos MB; con `offlineInstaller` pasarían a ~285 MB.
 - **Runtime de Visual C++**: `.cargo/config.toml` lo enlaza dentro del `.exe`
   (`+crt-static`), sin pedir el "Visual C++ Redistributable".
 

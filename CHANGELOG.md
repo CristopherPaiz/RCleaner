@@ -13,6 +13,12 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+### Changed
+
+- Installers are now a few MB instead of ~285 MB: they no longer carry the
+  full WebView2 installer. WebView2 already ships with Windows 10/11; if it is
+  missing, the installer downloads it.
+
 ## [0.1.0] - 2026-11-26
 
 ### Added
