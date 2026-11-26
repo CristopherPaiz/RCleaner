@@ -13,6 +13,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-26
+
 ### Added
 
 - Cleaning engine with parallel scanning, safe deletion (Recycle Bin or
@@ -67,4 +69,5 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 - `#![forbid(unsafe_code)]` in every crate except `crp-platform`, the only one
   that calls the Windows API.
 
-[Unreleased]: https://github.com/CristopherPaiz/RCleaner/commits/main
+[Unreleased]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/CristopherPaiz/RCleaner/releases/tag/v0.1.0
