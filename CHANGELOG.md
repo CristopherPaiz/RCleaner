@@ -13,6 +13,11 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+### Added
+
+- Portable `RCleaner_<version>_x64-portable.exe` in every release: runs
+  without installing (uses the WebView2 that ships with Windows 10/11).
+
 ## [0.1.1] - 2026-11-26
 
 ### Changed

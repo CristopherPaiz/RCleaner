@@ -1,7 +1,7 @@
 name: Release
 
-# Pushing a tag like v0.2.0 builds the installers and publishes a GitHub
-# release whose notes are the "## [0.2.0]" section of CHANGELOG.md.
+# Pushing a tag like v0.2.0 builds the installers and the portable exe and
+# publishes a GitHub release whose notes are the "## [0.2.0]" section of CHANGELOG.md.
 # Create the tag with scripts/release.ps1 (see docs/BUILD.md#releases).
 
 on:
@@ -69,5 +69,8 @@ jobs:
           $v = '${{ steps.notes.outputs.version }}'
           $files = Get-ChildItem target/release/bundle -Recurse -Include "RCleaner_${v}_*.msi", "RCleaner_${v}_*-setup.exe"
           if ($files.Count -lt 2) { throw 'Installers not found' }
-          gh release create '${{ github.ref_name }}' $files.FullName `
+          # Portable build: the same exe the installers ship, runs without installing.
+          $portable = "RCleaner_${v}_x64-portable.exe"
+          Copy-Item target/release/rcleaner.exe $portable
+          gh release create '${{ github.ref_name }}' $files.FullName $portable `
             --title "RCleaner $v" --notes-file release-notes.md

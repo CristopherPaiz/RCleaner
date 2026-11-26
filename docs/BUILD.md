@@ -58,7 +58,7 @@ Same as `cd app; cargo tauri build`. Output:
 
 | Type | Path | Use |
 |---|---|---|
-| Portable executable | `target\release\rcleaner.exe` | No install (needs WebView2) |
+| Portable executable | `target\release\rcleaner.exe` | No install (needs WebView2); published in each release as `RCleaner_<version>_x64-portable.exe` |
 | MSI (WiX) | `target\release\bundle\msi\RCleaner_<ver>_x64_es-ES.msi` | Companies / GPO / `msiexec /i … /qn` |
 | EXE (NSIS) | `target\release\bundle\nsis\RCleaner_<ver>_x64-setup.exe` | Regular installer for users |
 | CLI | `target\release\rcl.exe` (`cargo build -r -p crp-cli`) | Scripts / scheduled tasks |

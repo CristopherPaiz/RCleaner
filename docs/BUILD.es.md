@@ -58,7 +58,7 @@ Equivale a `cd app; cargo tauri build`. Resultados:
 
 | Tipo | Ruta | Uso |
 |---|---|---|
-| Ejecutable portable | `target\release\rcleaner.exe` | Sin instalar (requiere WebView2) |
+| Ejecutable portable | `target\release\rcleaner.exe` | Sin instalar (requiere WebView2); se publica en cada release como `RCleaner_<versión>_x64-portable.exe` |
 | MSI (WiX) | `target\release\bundle\msi\RCleaner_<ver>_x64_es-ES.msi` | Empresas / GPO / `msiexec /i … /qn` |
 | EXE (NSIS) | `target\release\bundle\nsis\RCleaner_<ver>_x64-setup.exe` | Instalador normal para usuarios |
 | CLI | `target\release\rcl.exe` (`cargo build -r -p crp-cli`) | Scripts / tareas programadas |
