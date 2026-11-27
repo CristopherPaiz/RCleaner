@@ -18,10 +18,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Máximo de entradas guardadas en el historial.
 const HISTORY_MAX: usize = 500;
-/// Tamaño a partir del cual el registro de borrados se recorta.
-const DELETIONS_MAX_BYTES: u64 = 4 * 1024 * 1024;
-/// Líneas que se conservan al recortar el registro de borrados.
-const DELETIONS_KEEP: usize = 10_000;
+/// Registros de borrado que se guardan por defecto.
+pub const DELETION_LOG_DEFAULT: u32 = 10_000;
+/// Tope del registro de borrados que se puede elegir.
+pub const DELETION_LOG_MAX: u32 = 100_000;
 
 /// Segundos desde 1970 (UTC).
 pub fn unix_now() -> u64 {
@@ -90,6 +90,9 @@ pub struct Settings {
     pub allow_system: bool,
     /// Ya se completó el asistente de la primera vez.
     pub onboarded: bool,
+    /// Cuántos borrados guardar en `deleted.log` (los más recientes).
+    /// `0` = no guardar registro.
+    pub deletion_log: u32,
 }
 
 impl Default for Settings {
@@ -106,6 +109,7 @@ impl Default for Settings {
             background: Background::default(),
             allow_system: false,
             onboarded: false,
+            deletion_log: DELETION_LOG_DEFAULT,
         }
     }
 }
@@ -197,10 +201,10 @@ pub struct DeletionRecord {
     pub permanent: bool,
 }
 
-/// Añade registros al final de `deleted.log` (una línea JSON cada uno).
-/// Si el archivo crece demasiado, se quedan las últimas líneas.
-pub fn append_deletions(path: &Path, records: &[DeletionRecord]) -> Result<()> {
-    if records.is_empty() {
+/// Añade registros al final de `deleted.log` (una línea JSON cada uno) y
+/// deja como mucho los `keep` más recientes. `keep == 0`: no se guarda nada.
+pub fn append_deletions(path: &Path, records: &[DeletionRecord], keep: u32) -> Result<()> {
+    if records.is_empty() || keep == 0 {
         return Ok(());
     }
     if let Some(dir) = path.parent() {
@@ -219,15 +223,40 @@ pub fn append_deletions(path: &Path, records: &[DeletionRecord]) -> Result<()> {
     file.write_all(&out).map_err(|e| Error::io(path, e))?;
     drop(file);
 
-    if std::fs::metadata(path).is_ok_and(|m| m.len() > DELETIONS_MAX_BYTES) {
-        let text = std::fs::read_to_string(path).map_err(|e| Error::io(path, e))?;
-        let lines: Vec<&str> = text.lines().collect();
-        let keep = &lines[lines.len().saturating_sub(DELETIONS_KEEP)..];
-        let tmp = path.with_extension("log.tmp");
-        std::fs::write(&tmp, keep.join("\n") + "\n").map_err(|e| Error::io(&tmp, e))?;
-        std::fs::rename(&tmp, path).map_err(|e| Error::io(path, e))?;
+    // Cada línea ocupa bastante más de 64 bytes: por debajo de eso no puede
+    // haber más de `keep` líneas y no hace falta contarlas.
+    if std::fs::metadata(path).is_ok_and(|m| m.len() > u64::from(keep) * 64) {
+        trim_deletions(path, keep)?;
     }
     Ok(())
+}
+
+/// Registros guardados en `deleted.log`.
+pub fn count_deletions(path: &Path) -> usize {
+    std::fs::read_to_string(path).map_or(0, |t| t.lines().filter(|l| !l.trim().is_empty()).count())
+}
+
+/// Deja sólo los `keep` registros más recientes (`0` = borra el archivo).
+/// Devuelve cuántos se quitaron.
+pub fn trim_deletions(path: &Path, keep: u32) -> Result<usize> {
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(e) => return Err(Error::io(path, e)),
+    };
+    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+    let removed = lines.len().saturating_sub(keep as usize);
+    if removed == 0 {
+        return Ok(0);
+    }
+    if keep == 0 {
+        std::fs::remove_file(path).map_err(|e| Error::io(path, e))?;
+        return Ok(removed);
+    }
+    let tmp = path.with_extension("log.tmp");
+    std::fs::write(&tmp, lines[removed..].join("\n") + "\n").map_err(|e| Error::io(&tmp, e))?;
+    std::fs::rename(&tmp, path).map_err(|e| Error::io(path, e))?;
+    Ok(removed)
 }
 
 /// Los últimos `limit` registros, el más reciente primero. Las líneas
@@ -336,8 +365,8 @@ mod tests {
             bytes: n,
             permanent: false,
         };
-        append_deletions(&f, &[rec(1), rec(2)]).unwrap();
-        append_deletions(&f, &[rec(3)]).unwrap();
+        append_deletions(&f, &[rec(1), rec(2)], 100).unwrap();
+        append_deletions(&f, &[rec(3)], 100).unwrap();
         std::fs::OpenOptions::new()
             .append(true)
             .open(&f)
@@ -346,5 +375,29 @@ mod tests {
             .unwrap();
         let got = load_deletions(&f, 2);
         assert_eq!(got, vec![rec(3), rec(2)]);
+    }
+
+    #[test]
+    fn deletions_log_respects_limit_and_can_be_cleared() {
+        let d = tempfile::tempdir().unwrap();
+        let f = d.path().join("deleted.log");
+        let rec = |n: u64| DeletionRecord {
+            timestamp: n,
+            source: "space".into(),
+            path: PathBuf::from(format!("C:\\x\\{n}")),
+            bytes: n,
+            permanent: false,
+        };
+        append_deletions(&f, &[rec(1)], 0).unwrap();
+        assert!(!f.exists(), "0 = no guardar");
+        let many: Vec<_> = (1..=5).map(rec).collect();
+        append_deletions(&f, &many, 100).unwrap();
+        assert_eq!(count_deletions(&f), 5);
+        assert_eq!(trim_deletions(&f, 2).unwrap(), 3);
+        let left = load_deletions(&f, 10);
+        assert_eq!(left.iter().map(|r| r.timestamp).collect::<Vec<_>>(), [5, 4]);
+        assert_eq!(trim_deletions(&f, 0).unwrap(), 2);
+        assert!(!f.exists());
+        assert_eq!(trim_deletions(&f, 0).unwrap(), 0);
     }
 }

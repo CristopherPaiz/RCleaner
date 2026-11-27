@@ -42,6 +42,28 @@
       .sort((a, b) => b.o.freed_bytes - a.o.freed_bytes),
   );
   const big = $derived(splitBytes(chosenBytes));
+  /** Unidad de una ruta ("C:"), en mayúsculas. */
+  const driveOf = (path?: string) => (path && /^[a-z]:/i.test(path) ? path.slice(0, 2).toUpperCase() : null);
+  /** Dónde busca la limpieza: el disco del sistema y los de tus proyectos. */
+  const scanDrives = $derived.by(() => {
+    const set = new Set<string>();
+    const sys = driveOf(app.info?.home);
+    if (sys) set.add(sys);
+    for (const r of app.info?.dev_roots ?? []) {
+      const d = driveOf(r);
+      if (d) set.add(d);
+    }
+    return [...set];
+  });
+  /** Lo marcado, sumado por unidad. */
+  const chosenDrives = $derived.by(() => {
+    const map = new Map<string, number>();
+    for (const f of chosen) {
+      const d = driveOf(f.path) ?? scanDrives[0] ?? "C:";
+      map.set(d, (map.get(d) ?? 0) + f.bytes);
+    }
+    return [...map].sort((a, b) => b[1] - a[1]);
+  });
   const freedParts = $derived(splitBytes(freed));
 
   function select(which: "safe" | "all" | "none") {
@@ -102,6 +124,12 @@
         <div class="blk" transition:fade={{ duration: 220 }}>
           <h1>{t("ui.clean.title")}</h1>
           <p class="dim lead">{t("ui.clean.lead")}</p>
+          {#if scanDrives.length > 0}
+            <p class="where faint small">
+              <Icon name="drive" size={14} />
+              {t("ui.clean.where", { drives: scanDrives.join(", ") })}
+            </p>
+          {/if}
           <div class="modes" role="tablist" aria-label={t("ui.clean.mode")}>
             <div class="segmented" bind:this={seg}>
               {#if pill}
@@ -184,6 +212,13 @@
       <p class="dim">
         {t("ui.clean.selected_of", { total: formatBytes(totalBytes), mode: app.mode?.name ?? "" })}
       </p>
+      {#if chosenDrives.length > 0}
+        <div class="drives" aria-label={t("ui.clean.on_drives")}>
+          {#each chosenDrives as [d, bytes] (d)}
+            <span class="drive-chip"><Icon name="drive" size={13} /> {d} <span class="num faint">{formatBytes(bytes)}</span></span>
+          {/each}
+        </div>
+      {/if}
     </div>
     <div class="tools">
       <label class="field search">
@@ -288,6 +323,9 @@
   .problem { margin: 10px 0; }
   .problem .mono { word-break: break-all; margin-top: 2px; }
 
+  .where { display: inline-flex; align-items: center; gap: 6px; margin: -4px 0 10px; }
+  .drives { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .drive-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; background: var(--raise); font-size: 12px; color: var(--text-2); }
   .results-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding: 4px 32px 10px; flex-wrap: wrap; }
   .tools { display: flex; gap: 8px; align-items: center; }
   .search { width: 220px; }

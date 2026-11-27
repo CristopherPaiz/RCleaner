@@ -71,7 +71,7 @@
 <style>
   .veil { position: fixed; inset: 0; z-index: 40; }
   .menu {
-    position: fixed; z-index: 41; min-width: 220px; max-width: 360px; padding: 5px;
+    position: fixed; z-index: 41; width: max-content; min-width: 220px; max-width: 360px; padding: 5px;
     display: flex; flex-direction: column; border-radius: 12px;
     background: color-mix(in srgb, var(--raise-2) 92%, transparent); backdrop-filter: blur(16px);
     border: 1px solid var(--line-2); box-shadow: 0 18px 50px -12px rgb(0 0 0 / 0.55);

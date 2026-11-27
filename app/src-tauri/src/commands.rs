@@ -4,7 +4,8 @@
 use crate::state::{AppState, BackgroundStatus, lock};
 use crp_core::context::default_dev_roots;
 use crp_core::settings::{
-    append_deletions, append_history, load_deletions, load_history, unix_now,
+    DELETION_LOG_MAX, append_deletions, append_history, count_deletions, load_deletions,
+    load_history, unix_now,
 };
 use crp_core::{
     Background, CancelToken, CleanOptions, CleanReport, DeletionRecord, Env, HistoryEntry, Mode,
@@ -142,7 +143,20 @@ pub fn recycle_bin() -> Option<RecycleBin> {
 
 /// Guarda lo eliminado en el registro (no interrumpe si falla).
 pub fn log_deletions(state: &AppState, records: &[DeletionRecord]) {
-    let _ = append_deletions(&state.paths.deletions_file(), records);
+    let keep = lock(&state.settings).deletion_log;
+    let _ = append_deletions(&state.paths.deletions_file(), records, keep);
+}
+
+/// Cuántos borrados hay guardados en el registro.
+#[tauri::command]
+pub fn deletions_count(state: State<'_, AppState>) -> usize {
+    count_deletions(&state.paths.deletions_file())
+}
+
+/// Deja sólo los `keep` registros más recientes (`0` = vaciar el registro).
+#[tauri::command]
+pub fn trim_deletions(state: State<'_, AppState>, keep: u32) -> CmdResult<usize> {
+    crp_core::settings::trim_deletions(&state.paths.deletions_file(), keep).map_err(err)
 }
 
 // ── Modos y módulos ────────────────────────────────────────────────────────
@@ -214,6 +228,7 @@ pub fn save_settings(
         },
         allow_system: settings.allow_system,
         onboarded: settings.onboarded,
+        deletion_log: settings.deletion_log.min(DELETION_LOG_MAX),
     };
     let previous = lock(&state.settings).clone();
     if previous.autostart != settings.autostart {
@@ -361,11 +376,50 @@ pub fn reveal(state: State<'_, AppState>, path: PathBuf) -> CmdResult<()> {
         .iter()
         .any(|f| f.path.as_ref() == Some(&path))
         || lock(&state.settings).dev_roots.contains(&path)
+        || lock(&state.settings).exclusions.contains(&path)
         || state.paths.config_dir == path;
     if !known {
         return Err(t("app.unknown_path"));
     }
     crate::space::open_in_explorer(&path)
+}
+
+#[derive(Serialize)]
+pub struct ExclusionSize {
+    path: PathBuf,
+    /// `false` si la carpeta ya no existe.
+    exists: bool,
+    bytes: u64,
+    items: u64,
+}
+
+/// Tamaño de cada exclusión (sólo lee). Se miden a la vez, una por hilo.
+#[tauri::command]
+pub async fn exclusion_sizes(state: State<'_, AppState>) -> CmdResult<Vec<ExclusionSize>> {
+    let paths = lock(&state.settings).exclusions.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let cancel = CancelToken::default();
+        std::thread::scope(|s| {
+            let jobs: Vec<_> = paths
+                .iter()
+                .map(|p| {
+                    let cancel = &cancel;
+                    s.spawn(move || {
+                        let stats = crp_core::fsutil::measure_path(p, cancel);
+                        ExclusionSize {
+                            path: p.clone(),
+                            exists: p.exists(),
+                            bytes: stats.bytes,
+                            items: stats.items,
+                        }
+                    })
+                })
+                .collect();
+            jobs.into_iter().filter_map(|j| j.join().ok()).collect()
+        })
+    })
+    .await
+    .map_err(err)
 }
 
 /// Ruta de un hallazgo del último análisis (para copiarla o excluirla).

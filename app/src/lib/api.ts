@@ -94,6 +94,15 @@ export interface Settings {
   /** Permitir elegir archivos de Windows protegidos (con aviso en cada uno). */
   allow_system: boolean;
   onboarded: boolean;
+  /** Borrados que se guardan en el registro (0 = no guardar). */
+  deletion_log: number;
+}
+
+export interface ExclusionSize {
+  path: string;
+  exists: boolean;
+  bytes: number;
+  items: number;
 }
 
 export interface DeletionRecord {
@@ -252,6 +261,10 @@ export const api = {
   drives: () => invoke<Drive[]>("drives"),
   history: () => invoke<HistoryEntry[]>("history"),
   deletions: (limit?: number) => invoke<DeletionRecord[]>("deletions", { limit }),
+  deletionsCount: () => invoke<number>("deletions_count"),
+  exclusionSizes: () => invoke<ExclusionSize[]>("exclusion_sizes"),
+  /** Deja sólo los `keep` registros más recientes (0 = vaciar). Devuelve cuántos quitó. */
+  trimDeletions: (keep: number) => invoke<number>("trim_deletions", { keep }),
   backgroundStatus: () => invoke<BackgroundStatus | null>("background_status"),
   recycleBin: () => invoke<{ bytes: number; items: number } | null>("recycle_bin"),
   openLink: (target: Link) => invoke<void>("open_link", { target }),
@@ -286,7 +299,8 @@ export const api = {
   diskTreemap: (id: number) => invoke<Treemap | null>("disk_treemap", { id }),
   diskChildren: (id: number) => invoke<DiskEntry[]>("disk_children", { id }),
   diskCrumbs: (id: number) => invoke<Crumb[]>("disk_crumbs", { id }),
-  diskLargest: (id: number) => invoke<DiskFile[]>("disk_largest", { id }),
+  /** Los archivos más grandes bajo `id`; con `ext`, sólo de ese tipo ("" = sin extensión). */
+  diskLargest: (id: number, ext?: string) => invoke<DiskFile[]>("disk_largest", { id, ext: ext ?? null }),
   diskReveal: (id: number) => invoke<void>("disk_reveal", { id }),
   diskPath: (id: number) => invoke<string | null>("disk_path", { id }),
   diskEntry: (id: number) => invoke<DiskEntry | null>("disk_entry", { id }),

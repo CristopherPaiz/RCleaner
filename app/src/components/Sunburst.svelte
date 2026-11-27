@@ -16,8 +16,10 @@
     highlight?: number | null;
     /** Clic derecho sobre un archivo o carpeta. */
     onmenu?: (e: MouseEvent, id: number) => void;
+    /** Elemento de la carpeta actual bajo el ratón (para resaltarlo en la lista). */
+    onhover?: (id: number | null) => void;
   }
-  let { view, rings, canUp, onopen, onup, highlight = null, onmenu }: Props = $props();
+  let { view, rings, canUp, onopen, onup, highlight = null, onmenu, onhover }: Props = $props();
 
   const geo = $derived(layout(view, rings));
   let hover = $state<Arc | null>(null);
@@ -32,6 +34,13 @@
   function within(key: string, base: string) {
     return key === base || key.startsWith(base + "/");
   }
+
+  /** Hijo directo de la carpeta actual al que pertenece el arco. */
+  function topId(a: Arc | null): number | null {
+    const first = a?.key.split("/")[1];
+    return first && /^\d+$/.test(first) ? Number(first) : null;
+  }
+  $effect(() => onhover?.(topId(hover)));
 
   function click(a: Arc) {
     if (a.kind === "dir" && a.id !== null) onopen(a.id);

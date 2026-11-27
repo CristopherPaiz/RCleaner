@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api, type Mode, type Settings } from "../lib/api";
   import { app } from "../lib/app.svelte";
-  import { LANGUAGES, resolveLang, t, tn } from "../lib/i18n.svelte";
+  import { LANGUAGES, i18n, resolveLang, t, tn } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
   import ModeEditor from "../components/ModeEditor.svelte";
   import Switch from "../components/Switch.svelte";
@@ -15,6 +15,36 @@
   let askSystem = $state(false);
   let agreed = $state(false);
   let showLog = $state(false);
+  /** Opciones de cuántos borrados guardar. */
+  const LOG_SIZES = [0, 100, 1000, 10000, 100000];
+  /** Cambio de tamaño del registro pendiente de confirmar (borraría registros). */
+  let askLog = $state<{ keep: number; drop: number } | null>(null);
+
+  async function setLogSize(keep: number) {
+    const count = await api.deletionsCount();
+    if (count > keep) {
+      askLog = { keep, drop: count - keep };
+      return;
+    }
+    await update({ deletion_log: keep });
+  }
+
+  async function clearLog() {
+    const count = await api.deletionsCount();
+    askLog = { keep: -1, drop: count };
+  }
+
+  async function applyLog() {
+    if (!askLog) return;
+    const { keep } = askLog;
+    askLog = null;
+    try {
+      await api.trimDeletions(Math.max(keep, 0));
+      if (keep >= 0) await update({ deletion_log: keep });
+    } catch (e) {
+      app.error = String(e);
+    }
+  }
   let bgStatus = $state<BackgroundStatus | null>(null);
 
   onMount(() => {
@@ -203,6 +233,22 @@
         </span>
         <button class="btn small" onclick={() => (showLog = true)}><Icon name="list" size={14} /> {t("ui.log.open")}</button>
       </div>
+      <div class="item">
+        <span class="grow">
+          {t("ui.log.keep")}
+          <span class="faint block">{t("ui.log.keep_hint")}</span>
+        </span>
+        <select
+          class="field"
+          value={app.settings.deletion_log}
+          onchange={(e) => setLogSize(Number((e.currentTarget as HTMLSelectElement).value))}
+        >
+          {#each LOG_SIZES as n (n)}
+            <option value={n}>{n === 0 ? t("ui.log.keep_none") : t("ui.log.keep_n", { n: n.toLocaleString(i18n.lang) })}</option>
+          {/each}
+        </select>
+        <button class="btn small quiet" onclick={clearLog}><Icon name="trash" size={14} /> {t("ui.log.clear")}</button>
+      </div>
     </div>
   </section>
 
@@ -240,15 +286,11 @@
       <button class="btn small" onclick={() => addFolder("exclusions")}><Icon name="plus" size={14} /> {t("ui.common.add")}</button>
     </div>
     <div class="group">
-      {#each app.settings.exclusions as p (p)}
-        <div class="item excl">
-          <Icon name="shield" size={16} />
-          <span class="ellipsis grow">{p}</span>
-          <button class="icon-btn" title={t("ui.common.remove")} onclick={() => removeFolder("exclusions", p)}><Icon name="x" size={14} /></button>
-        </div>
-      {:else}
-        <div class="item faint">{t("ui.settings.no_exclusions")}</div>
-      {/each}
+      <div class="item excl">
+        <Icon name="shield" size={16} />
+        <span class="grow">{tn("ui.excl.count", app.settings.exclusions.length)}</span>
+        <button class="btn small" onclick={() => (app.view = "exclusions")}>{t("ui.excl.manage")} <Icon name="chevron" size={12} /></button>
+      </div>
     </div>
   </section>
 
@@ -327,6 +369,29 @@
 
 {#if showLog}
   <DeletionLog onclose={() => (showLog = false)} />
+{/if}
+
+{#if askLog}
+  <Modal title={askLog.keep === 0 || askLog.keep === -1 ? t("ui.log.clear_title") : t("ui.log.trim_title")} onclose={() => (askLog = null)}>
+    {#if askLog.drop === 0}
+      <p>{t("ui.log.empty")}</p>
+    {:else}
+      <p>
+        {askLog.keep > 0
+          ? tn("ui.log.trim_text", askLog.drop)
+          : tn("ui.log.clear_text", askLog.drop)}
+      </p>
+      <p class="faint small">{t("ui.log.no_undo")}</p>
+    {/if}
+    {#snippet buttons()}
+      {#if askLog?.drop === 0}
+        <button class="btn" onclick={() => (askLog = null)}>{t("ui.common.close")}</button>
+      {:else}
+        <button class="btn" onclick={() => (askLog = null)}>{t("ui.common.cancel")}</button>
+        <button class="btn danger" onclick={applyLog}>{t("ui.log.confirm_delete")}</button>
+      {/if}
+    {/snippet}
+  </Modal>
 {/if}
 
 {#if askSystem}

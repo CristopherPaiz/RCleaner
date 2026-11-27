@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { t, tn } from "../lib/i18n.svelte";
-  import { api, type Drive } from "../lib/api";
+  import { api, type DiskFile, type Drive } from "../lib/api";
   import { app } from "../lib/app.svelte";
   import { space, type Pick, type SpaceTab } from "../lib/space.svelte";
   import { menu, type MenuEntry } from "../lib/menu.svelte";
@@ -26,6 +26,13 @@
   let deleting = $state(false);
   let systemAsk = $state<{ pick: Pick; reason: string } | null>(null);
   let hoverId = $state<number | null>(null);
+  /** Elemento señalado en el gráfico: se resalta en la lista. */
+  let chartHover = $state<number | null>(null);
+  let rowsEl = $state<HTMLElement>();
+  $effect(() => {
+    if (chartHover === null || !rowsEl) return;
+    rowsEl.querySelector(`[data-id="${chartHover}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
 
   /** Lo necesario de una carpeta o archivo para marcarlo o abrir su menú. */
   interface NodeInfo {
@@ -120,6 +127,23 @@
     if (dir) void space.scan(dir);
   }
 
+  /** Desplegable para cambiar de unidad o carpeta sin salir del análisis. */
+  function switchMenu(e: MouseEvent) {
+    const cur = space.summary?.path.toLowerCase();
+    menu.showUnder(e.currentTarget as HTMLElement, [
+      ...drives.map((d) => ({
+        label: `${d.label || t("ui.space.drive")} (${d.root.replace(/\\$/, "")})`,
+        icon: "drive",
+        hint: t("ui.space.free_short", { size: formatBytes(d.free_bytes) }),
+        disabled: d.root.toLowerCase() === cur,
+        action: () => space.scan(d.root),
+      })),
+      "-",
+      { label: t("ui.space.pick_folder"), icon: "folder", action: pickFolder },
+      { label: t("ui.space.all_drives"), icon: "grid", action: () => space.reset() },
+    ]);
+  }
+
   function pickedDrive(path: string) {
     return drives.find((d) => d.root.toLowerCase() === path.toLowerCase());
   }
@@ -189,14 +213,17 @@
         <button class:on={space.chart === "radial"} onclick={() => space.setChart("radial")}><Icon name="pie" size={13} /> {t("ui.space.chart_radial")}</button>
         <button class:on={space.chart === "map"} onclick={() => space.setChart("map")}><Icon name="grid" size={13} /> {t("ui.space.chart_map")}</button>
       </div>
-      <button class="btn quiet small" onclick={() => space.reset()}><Icon name="refresh" size={14} /> {t("ui.space.other_drive")}</button>
+      <button class="btn small" title={t("ui.space.rescan_hint")} onclick={() => space.rescan()}><Icon name="refresh" size={14} /> {t("ui.space.rescan")}</button>
+      <button class="btn small switch" onclick={switchMenu}>
+        <Icon name="drive" size={14} /> {t("ui.space.other_drive")} <Icon name="chevron" size={12} />
+      </button>
     </div>
   </header>
 
   <div class="split" class:wide={space.chart === "map"}>
     <div class="chart" class:map={space.chart === "map"}>
       {#if space.chart === "map" && space.treemap}
-        <Treemap data={space.treemap} {ranks} onopen={(id) => space.open(id)} highlight={hoverId} onmenu={chartMenu} />
+        <Treemap data={space.treemap} {ranks} onopen={(id) => space.open(id)} highlight={hoverId} onmenu={chartMenu} onhover={(id) => (chartHover = id)} />
       {:else}
       <Sunburst
         view={space.view}
@@ -205,6 +232,7 @@
         onopen={(id) => space.open(id)}
         onup={() => space.up()}
         highlight={hoverId}
+        onhover={(id) => (chartHover = id)}
         onmenu={chartMenu}
       />
       {/if}
@@ -217,13 +245,15 @@
         {/each}
       </div>
 
-      <div class="rows">
+      <div class="rows" class:focusing={chartHover !== null && space.tab === "folder"} bind:this={rowsEl}>
         {#if space.tab === "folder"}
           {#each space.entries as e (e.id)}
             <div
               class="row"
               class:excluded={e.excluded}
               class:picked={space.picks.has(e.id)}
+              class:hot={chartHover === e.id}
+              data-id={e.id}
               role="listitem"
               onmouseenter={() => (hoverId = e.id)}
               onmouseleave={() => (hoverId = null)}
@@ -252,32 +282,34 @@
           {/each}
         {:else if space.tab === "largest"}
           {#each space.largest as f (f.id)}
-            {@const [dir] = splitPath(f.path)}
-            {@const fn = { ...f, kind: "file" as const }}
-            <div class="row file" class:excluded={f.excluded} class:picked={space.picks.has(f.id)} oncontextmenu={(ev) => nodeMenu(ev, fn)} role="listitem">
-              <span class="f-ic"><FileIcon key={fileKey(f.name, `node:${f.id}`)} fallback={fileIcon(f.name)} size={20} /></span>
-              <span class="f-main">
-                <span class="ellipsis">{f.name}</span>
-                <span class="faint ellipsis small">{dir} · {f.modified ? formatAge(Math.floor((now - f.modified) / 86400)) : ""}</span>
-              </span>
-              <span class="size num">{formatBytes(f.size)}</span>
-              <span class="acts">
-                <button class="icon-btn" title={t("ui.common.show_in_explorer")} onclick={() => api.diskReveal(f.id)}><Icon name="external" size={14} /></button>
-                {@render pickBtn(fn)}
-              </span>
-            </div>
+            {@render fileRow(f)}
+          {:else}
+            <p class="faint empty">{t("ui.space.no_files")}</p>
+          {/each}
+        {:else if space.extFilter !== null}
+          {@const x = space.summary.extensions.find((e) => e.ext === space.extFilter)}
+          <div class="ext-head">
+            <button class="btn quiet small" onclick={() => space.clearExt()}><Icon name="back" size={14} /> {t("ui.space.tab_types")}</button>
+            <span class="mono">{space.extFilter ? `.${space.extFilter}` : t("ui.space.no_ext")}</span>
+            {#if x}<span class="faint small num">{tn("ui.common.files", x.files)} · {formatBytes(x.bytes)}</span>{/if}
+          </div>
+          {#if x && x.files > space.extFiles.length}
+            <p class="faint note">{t("ui.space.ext_top", { n: space.extFiles.length })}</p>
+          {/if}
+          {#each space.extFiles as f (f.id)}
+            {@render fileRow(f)}
           {:else}
             <p class="faint empty">{t("ui.space.no_files")}</p>
           {/each}
         {:else}
           <p class="faint note">{t("ui.space.types_note")}</p>
           {#each space.summary.extensions as x (x.ext)}
-            <div class="row type">
+            <button class="row type" title={t("ui.space.ext_show")} onclick={() => space.showExt(x.ext)}>
               <span class="ext mono"><span class="sw" style:background={rgb(extColor(ranks.get(x.ext) ?? -1))}></span><FileIcon key="ext:{x.ext}" fallback={fileIcon(`a.${x.ext}`)} size={16} />{x.ext ? `.${x.ext}` : t("ui.space.no_ext")}</span>
               <span class="share"><span style:width="{(x.bytes / maxExt) * 100}%"></span></span>
               <span class="faint num small">{formatCount(x.files)}</span>
               <span class="size num">{formatBytes(x.bytes)}</span>
-            </div>
+            </button>
           {/each}
         {/if}
       </div>
@@ -318,6 +350,23 @@
     {/snippet}
   </Dock>
 {/if}
+
+{#snippet fileRow(f: DiskFile)}
+  {@const [dir] = splitPath(f.path)}
+  {@const fn = { ...f, kind: "file" as const }}
+  <div class="row file" class:excluded={f.excluded} class:picked={space.picks.has(f.id)} oncontextmenu={(ev) => nodeMenu(ev, fn)} role="listitem">
+    <span class="f-ic"><FileIcon key={fileKey(f.name, `node:${f.id}`)} fallback={fileIcon(f.name)} size={20} /></span>
+    <span class="f-main">
+      <span class="ellipsis">{f.name}</span>
+      <span class="faint ellipsis small">{dir} · {f.modified ? formatAge(Math.floor((now - f.modified) / 86400)) : ""}</span>
+    </span>
+    <span class="size num">{formatBytes(f.size)}</span>
+    <span class="acts">
+      <button class="icon-btn" title={t("ui.common.show_in_explorer")} onclick={() => api.diskReveal(f.id)}><Icon name="external" size={14} /></button>
+      {@render pickBtn(fn)}
+    </span>
+  </div>
+{/snippet}
 
 {#snippet pickBtn(n: NodeInfo)}
   {#if n.excluded}
@@ -395,6 +444,15 @@
   .crumb:hover { background: var(--hover); color: var(--text); }
   .crumb.last { color: var(--text); font-weight: 600; font-family: var(--font-display); font-size: 17px; }
 
+  .rows .row { transition: opacity 0.12s, background 0.12s; }
+  .rows.focusing .row:not(.hot) { opacity: 0.38; }
+  .row.hot { background: var(--hover); box-shadow: inset 3px 0 0 var(--a); }
+  .switch { gap: 6px; }
+  .switch :global(svg:last-child) { transform: rotate(90deg); }
+  .ext-head { display: flex; align-items: center; gap: 10px; padding: 4px 4px 8px; }
+  .ext-head .mono { font-weight: 600; color: var(--text); }
+  button.row.type { width: 100%; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+  button.row.type:hover { background: var(--hover); }
   .split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 1.1fr) minmax(340px, 1fr); gap: 24px; padding: 8px 32px 0; }
   .chart { min-height: 0; display: grid; place-items: center; padding: 8px; container-type: size; }
   .split.wide { grid-template-columns: minmax(360px, 1.7fr) minmax(340px, 1fr); }

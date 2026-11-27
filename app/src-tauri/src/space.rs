@@ -298,10 +298,10 @@ pub fn disk_crumbs(state: State<'_, AppState>, id: NodeId) -> Vec<Crumb> {
 }
 
 #[tauri::command]
-pub fn disk_largest(state: State<'_, AppState>, id: NodeId) -> Vec<FileEntry> {
+pub fn disk_largest(state: State<'_, AppState>, id: NodeId, ext: Option<String>) -> Vec<FileEntry> {
     let mut files = lock(&state.disk)
         .as_ref()
-        .map(|t| t.largest_files(id, 200))
+        .map(|t| t.largest_files_of(id, 200, ext.as_deref()))
         .unwrap_or_default();
     for f in &mut files {
         f.excluded = excluded(&state, &f.path);

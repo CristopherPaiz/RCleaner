@@ -13,6 +13,26 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+### Added
+
+- **Exclusions** tab in the sidebar: every excluded folder with its size,
+  plus add, remove and show in Explorer.
+- Space: **Analyze again** button that rescans and returns to the folder you
+  were in, and a visible **Change drive** menu.
+- Space › Types: clicking a file type lists the largest files of that type.
+- Deletion log: choose how many entries to keep (or none) and clear it; both
+  ask for confirmation before deleting entries.
+
+### Changed
+
+- Hovering the radial chart or the treemap highlights that item in the list
+  and dims the rest.
+- Cleanup shows which drives it looks at and how much is selected on each.
+
+### Fixed
+
+- Menus opened near the right edge of the window were cut off.
+
 ## [0.1.2] - 2026-11-27
 
 ### Added

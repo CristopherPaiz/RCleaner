@@ -622,12 +622,21 @@ impl DiskTree {
 
     /// Los `limit` archivos más grandes bajo `id`.
     pub fn largest_files(&self, id: NodeId, limit: usize) -> Vec<FileEntry> {
+        self.largest_files_of(id, limit, None)
+    }
+
+    /// Como [`Self::largest_files`], sólo con la extensión `ext` (minúsculas,
+    /// `""` = sin extensión) si se indica.
+    pub fn largest_files_of(&self, id: NodeId, limit: usize, ext: Option<&str>) -> Vec<FileEntry> {
         let mut heap: BinaryHeap<Reverse<(u64, NodeId)>> = BinaryHeap::new();
         let mut stack = vec![id];
         while let Some(cur) = stack.pop() {
             let Some(n) = self.node(cur) else { continue };
             match n.kind {
                 Kind::File => {
+                    if ext.is_some_and(|e| extension(&n.name) != e) {
+                        continue;
+                    }
                     heap.push(Reverse((n.size, cur)));
                     if heap.len() > limit {
                         heap.pop();
@@ -751,6 +760,11 @@ mod tests {
         assert_eq!(t.path(inner).unwrap(), d.path().join("big").join("inner"));
         let crumbs: Vec<_> = t.ancestors(inner).into_iter().map(|c| c.name).collect();
         assert_eq!(crumbs[1..], ["big".to_string(), "inner".to_string()]);
+        let mp4 = t.largest_files_of(0, 10, Some("mp4"));
+        assert_eq!(
+            mp4.iter().map(|f| f.name.as_str()).collect::<Vec<_>>(),
+            ["b.MP4"]
+        );
         let top = t.largest_files(0, 2);
         assert_eq!(top.iter().map(|f| f.size).collect::<Vec<_>>(), [5000, 3000]);
     }

@@ -51,6 +51,9 @@ class SpaceStore {
   crumbs = $state<Crumb[]>([]);
   largest = $state<DiskFile[]>([]);
   tab = $state<SpaceTab>("folder");
+  /** Pestaña Tipos: extensión elegida y sus archivos (de toda la unidad). */
+  extFilter = $state<string | null>(null);
+  extFiles = $state<DiskFile[]>([]);
   /** Mapa radial o de rectángulos (estilo WinDirStat). */
   chart = $state<SpaceChart>(savedChart());
   treemap = $state.raw<Treemap | null>(null);
@@ -85,6 +88,7 @@ class SpaceStore {
       this.summary = await api.diskScan(path);
       icons.forgetNodes();
       this.tab = "folder";
+      this.extFilter = null;
       await this.open(this.summary.root);
       this.phase = "results";
     } catch (e) {
@@ -130,6 +134,7 @@ class SpaceStore {
 
   async setTab(tab: SpaceTab) {
     this.tab = tab;
+    this.extFilter = null;
     if (tab === "largest") this.largest = await api.diskLargest(this.node);
   }
 
@@ -163,7 +168,41 @@ class SpaceStore {
 
   /** Vuelve a pedir la carpeta actual (p. ej. tras cambiar exclusiones). */
   async refresh() {
-    if (this.phase === "results") await this.open(this.node);
+    if (this.phase !== "results") return;
+    await this.open(this.node);
+    if (this.extFilter !== null) await this.showExt(this.extFilter);
+  }
+
+  /** Archivos de un tipo en toda la unidad analizada. */
+  async showExt(ext: string) {
+    if (!this.summary) return;
+    this.extFilter = ext;
+    try {
+      this.extFiles = await api.diskLargest(this.summary.root, ext);
+    } catch (e) {
+      this.error = String(e);
+    }
+  }
+
+  clearExt() {
+    this.extFilter = null;
+    this.extFiles = [];
+  }
+
+  /** Vuelve a analizar lo mismo (p. ej. tras borrar algo a mano) y regresa
+   *  a la carpeta en la que estabas si sigue existiendo. */
+  async rescan() {
+    if (!this.summary) return;
+    const names = this.crumbs.slice(1).map((c) => c.name);
+    const tab = this.tab;
+    await this.scan(this.summary.path);
+    if (this.phase !== "results") return;
+    for (const name of names) {
+      const next = this.entries.find((e) => e.kind === "dir" && e.name === name);
+      if (!next) break;
+      await this.open(next.id);
+    }
+    if (tab !== "folder") await this.setTab(tab);
   }
 
   reset() {

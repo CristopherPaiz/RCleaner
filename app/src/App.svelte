@@ -15,6 +15,7 @@
   import Dupes from "./views/Dupes.svelte";
   import SettingsView from "./views/Settings.svelte";
   import About from "./views/About.svelte";
+  import Exclusions from "./views/Exclusions.svelte";
   import ContextMenu from "./components/ContextMenu.svelte";
   import Wizard from "./components/Wizard.svelte";
   import { menu, textMenu } from "./lib/menu.svelte";
@@ -77,6 +78,7 @@
     { view: "clean", label: "ui.nav.clean", icon: "sparkles" },
     { view: "space", label: "ui.nav.space", icon: "pie" },
     { view: "dupes", label: "ui.nav.dupes", icon: "copy" },
+    { view: "exclusions", label: "ui.nav.exclusions", icon: "shield" },
   ];
 
   /** Indicador de trabajo en curso en el riel. */
@@ -179,6 +181,8 @@
           <Space />
         {:else if app.view === "dupes"}
           <Dupes />
+        {:else if app.view === "exclusions"}
+          <Exclusions />
         {:else if app.view === "about"}
           <About />
         {:else}

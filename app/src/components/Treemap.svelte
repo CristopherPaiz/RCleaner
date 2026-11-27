@@ -15,10 +15,12 @@
     onopen: (id: number) => void;
     /** Id resaltado desde la lista. */
     highlight?: number | null;
+    /** Elemento de la carpeta actual bajo el ratón (para resaltarlo en la lista). */
+    onhover?: (id: number | null) => void;
     /** Clic derecho sobre un archivo o carpeta. */
     onmenu?: (e: MouseEvent, id: number) => void;
   }
-  let { data, ranks, onopen, highlight = null, onmenu }: Props = $props();
+  let { data, ranks, onopen, highlight = null, onmenu, onhover }: Props = $props();
 
   let box: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -102,6 +104,11 @@
     const i = hover.i;
     if (i > 0 && data.kind[i] !== "rest") onmenu(e, data.id[i]);
   }
+
+  $effect(() => {
+    const tp = hover ? top(hover.i) : -1;
+    onhover?.(tp > 0 && data.kind[tp] !== "rest" ? data.id[tp] : null);
+  });
 
   const highlighted = $derived(highlight === null ? -1 : data.id.indexOf(highlight));
   const hoverBox = $derived(hover ? box_of(hover.i) : null);

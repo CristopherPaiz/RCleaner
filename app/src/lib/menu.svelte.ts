@@ -26,6 +26,12 @@ class MenuStore {
     this.open = { x: e.clientX, y: e.clientY, items: clean };
   }
 
+  /** Abre el menú bajo un botón (menús desplegables). */
+  showUnder(el: HTMLElement, items: MenuEntry[]) {
+    const r = el.getBoundingClientRect();
+    if (items.length > 0) this.open = { x: r.left, y: r.bottom + 4, items };
+  }
+
   close() {
     this.open = null;
   }

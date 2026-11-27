@@ -369,7 +369,8 @@
       "clean": "Cleanup",
       "space": "Space",
       "dupes": "Duplicates",
-      "settings": "Settings"
+      "settings": "Settings",
+      "exclusions": "Exclusions"
     },
     "admin": {
       "label": "Admin",
@@ -494,7 +495,9 @@
       "needs_admin": "Some items need administrator rights (Admin button in the menu).",
       "cleaning": "Cleaning {done} of {total}",
       "restart": "Start over",
-      "clean": "Clean"
+      "clean": "Clean",
+      "where": "Looks on the system drive and your projects: {drives}",
+      "on_drives": "By drive"
     },
     "results": {
       "select_group": "Select {name}",
@@ -519,7 +522,7 @@
       "free_of": "{free} free of {total}",
       "pick_folder": "Choose a folder…",
       "path": "Path",
-      "other_drive": "Another drive",
+      "other_drive": "Change drive",
       "chart_aria": "Chart type",
       "chart_radial": "Radial",
       "chart_map": "Map",
@@ -545,7 +548,14 @@
       "confirm_title": "Move {size} to the Recycle Bin?",
       "confirm_text": "You can restore it from the Recycle Bin. If something doesn't fit in it, Windows will warn you before deleting it.",
       "continue": "Continue",
-      "excluded": "In your exclusions: won't be deleted"
+      "excluded": "In your exclusions: won't be deleted",
+      "rescan": "Analyze again",
+      "rescan_hint": "Analyze again to see changes made outside RCleaner",
+      "all_drives": "See all drives",
+      "drive": "Drive",
+      "free_short": "{size} free",
+      "ext_show": "Show these files",
+      "ext_top": "The {n} largest of this type."
     },
     "sunburst": {
       "aria": "Usage map of {name}",
@@ -715,7 +725,20 @@
       "empty": "Nothing has been deleted yet.",
       "total": "{n} items · {size}",
       "permanent": "Deleted for good",
-      "bin": "Sent to the Recycle Bin"
+      "bin": "Sent to the Recycle Bin",
+      "keep": "How much to keep",
+      "keep_hint": "The most recent deletions; older ones are discarded.",
+      "keep_none": "Don't keep a log",
+      "keep_n": "Last {n}",
+      "clear": "Clear",
+      "clear_title": "Clear the log",
+      "trim_title": "Keep fewer entries",
+      "clear_text_one": "The saved log will be deleted (1 entry).",
+      "clear_text_other": "The saved log will be deleted ({n} entries).",
+      "trim_text_one": "1 entry will be deleted, the oldest one.",
+      "trim_text_other": "The {n} oldest entries will be deleted.",
+      "no_undo": "Only the history is deleted; your files don't change. This can't be undone.",
+      "confirm_delete": "Delete entries"
     },
     "about": {
       "title": "About",
@@ -750,6 +773,20 @@
       "start": "Get started",
       "next": "Next",
       "finish": "Done"
+    },
+    "excl": {
+      "title": "Exclusions",
+      "lead": "Folders RCleaner never cleans or lets you delete, including everything inside.",
+      "add": "Add folder",
+      "measure": "Measure again",
+      "measuring": "Measuring…",
+      "count_one": "1 excluded folder",
+      "count_other": "{n} excluded folders",
+      "missing": "No longer exists",
+      "empty": "No exclusions.",
+      "empty_hint": "Add a folder here or right-click it in Space, Cleanup or Duplicates.",
+      "note": "Protected in Cleanup, Space and Duplicates. Right-click a row for more options.",
+      "manage": "Manage"
     }
   },
   "cli": {

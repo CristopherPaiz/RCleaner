@@ -369,7 +369,8 @@
       "clean": "Limpieza",
       "space": "Espacio",
       "dupes": "Duplicados",
-      "settings": "Ajustes"
+      "settings": "Ajustes",
+      "exclusions": "Exclusiones"
     },
     "admin": {
       "label": "Admin",
@@ -494,7 +495,9 @@
       "needs_admin": "Algunos elementos necesitan permisos de administrador (botón Admin del menú).",
       "cleaning": "Limpiando {done} de {total}",
       "restart": "Empezar de nuevo",
-      "clean": "Limpiar"
+      "clean": "Limpiar",
+      "where": "Busca en el disco del sistema y en tus proyectos: {drives}",
+      "on_drives": "Por unidad"
     },
     "results": {
       "select_group": "Seleccionar {name}",
@@ -519,7 +522,7 @@
       "free_of": "{free} libres de {total}",
       "pick_folder": "Elegir una carpeta…",
       "path": "Ruta",
-      "other_drive": "Otra unidad",
+      "other_drive": "Cambiar unidad",
       "chart_aria": "Tipo de gráfico",
       "chart_radial": "Radial",
       "chart_map": "Mapa",
@@ -545,7 +548,14 @@
       "confirm_title": "¿Mover {size} a la papelera?",
       "confirm_text": "Podrás restaurarlo desde la Papelera de reciclaje. Si algo no cabe en ella, Windows te avisará antes de borrarlo.",
       "continue": "Continuar",
-      "excluded": "En tus exclusiones: no se elimina"
+      "excluded": "En tus exclusiones: no se elimina",
+      "rescan": "Volver a analizar",
+      "rescan_hint": "Analiza de nuevo para ver los cambios hechos fuera de RCleaner",
+      "all_drives": "Ver todas las unidades",
+      "drive": "Unidad",
+      "free_short": "{size} libres",
+      "ext_show": "Ver estos archivos",
+      "ext_top": "Los {n} más grandes de este tipo."
     },
     "sunburst": {
       "aria": "Mapa de uso de {name}",
@@ -715,7 +725,20 @@
       "empty": "Aún no se ha eliminado nada.",
       "total": "{n} elementos · {size}",
       "permanent": "Eliminado para siempre",
-      "bin": "Enviado a la papelera"
+      "bin": "Enviado a la papelera",
+      "keep": "Cuánto guardar",
+      "keep_hint": "Los borrados más recientes; los más antiguos se descartan.",
+      "keep_none": "No guardar registro",
+      "keep_n": "Últimos {n}",
+      "clear": "Vaciar",
+      "clear_title": "Vaciar el registro",
+      "trim_title": "Guardar menos registros",
+      "clear_text_one": "Se borrará el registro guardado (1 elemento).",
+      "clear_text_other": "Se borrará el registro guardado ({n} elementos).",
+      "trim_text_one": "Se borrará 1 registro, el más antiguo.",
+      "trim_text_other": "Se borrarán los {n} registros más antiguos.",
+      "no_undo": "Sólo se borra el historial; los archivos no cambian. No se puede deshacer.",
+      "confirm_delete": "Borrar registros"
     },
     "about": {
       "title": "Acerca de",
@@ -750,6 +773,20 @@
       "start": "Empezar",
       "next": "Siguiente",
       "finish": "Listo"
+    },
+    "excl": {
+      "title": "Exclusiones",
+      "lead": "Carpetas que RCleaner nunca limpia ni deja borrar, ni lo que hay dentro.",
+      "add": "Añadir carpeta",
+      "measure": "Medir de nuevo",
+      "measuring": "Midiendo…",
+      "count_one": "1 carpeta excluida",
+      "count_other": "{n} carpetas excluidas",
+      "missing": "Ya no existe",
+      "empty": "No hay exclusiones.",
+      "empty_hint": "Añade una carpeta aquí o con clic derecho en Espacio, Limpieza o Duplicados.",
+      "note": "Se protegen en Limpieza, Espacio y Duplicados. Clic derecho en una fila para más opciones.",
+      "manage": "Gestionar"
     }
   },
   "cli": {

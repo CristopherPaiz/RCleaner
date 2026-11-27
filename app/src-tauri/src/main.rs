@@ -36,7 +36,9 @@ fn main() {
     // iniciar con Windows no (sería un UAC en cada arranque); si el usuario
     // cancela el UAC, se sigue sin permisos.
     let always_admin = lock(&state.settings).always_admin;
+    // En desarrollo no: el proceso elevado se separa de `cargo tauri dev`.
     if always_admin
+        && !cfg!(debug_assertions)
         && !background
         && !crp_platform::is_elevated()
         && crp_platform::relaunch_elevated(&[]).is_ok()
@@ -44,11 +46,14 @@ fn main() {
         return;
     }
 
-    tauri::Builder::default()
-        // Primero: una segunda instancia sólo trae al frente la primera.
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            tray::show(app)
-        }))
+    let builder = tauri::Builder::default();
+    // Primero: una segunda instancia sólo trae al frente la primera. En
+    // desarrollo no, para poder probar con la versión instalada abierta.
+    #[cfg(not(debug_assertions))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        tray::show(app)
+    }));
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
@@ -71,6 +76,9 @@ fn main() {
             commands::drives,
             commands::history,
             commands::deletions,
+            commands::deletions_count,
+            commands::exclusion_sizes,
+            commands::trim_deletions,
             commands::background_status,
             commands::recycle_bin,
             commands::list_modes,

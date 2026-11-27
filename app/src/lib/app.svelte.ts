@@ -15,7 +15,7 @@ import {
 } from "./api";
 import { i18n, resolveLang } from "./i18n.svelte";
 
-export type View = "home" | "clean" | "space" | "dupes" | "settings" | "about";
+export type View = "home" | "clean" | "space" | "dupes" | "exclusions" | "settings" | "about";
 export type Phase = "idle" | "scanning" | "results" | "cleaning" | "done";
 
 class AppStore {
@@ -36,6 +36,7 @@ class AppStore {
     background: { enabled: false, every_hours: 6, threshold_mb: 1024 },
     allow_system: false,
     onboarded: true,
+    deletion_log: 10000,
   });
   /** Datos iniciales cargados (para ocultar la pantalla de carga). */
   loaded = $state(false);
