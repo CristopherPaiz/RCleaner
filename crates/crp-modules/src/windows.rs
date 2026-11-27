@@ -220,8 +220,9 @@ impl CleanerModule for ComponentStore {
     }
 
     fn scan(&self, ctx: &ScanContext) -> Result<Vec<Finding>> {
-        // DISM sólo funciona como administrador.
-        if !ctx.is_admin {
+        // DISM sólo funciona como administrador, y el análisis tarda varios
+        // minutos: sólo si el usuario lo activó en Ajustes.
+        if !ctx.is_admin || !ctx.component_store {
             return Ok(Vec::new());
         }
         let mut args: Vec<String> = DISM_ARGS.iter().map(|s| (*s).to_owned()).collect();
@@ -306,6 +307,18 @@ The operation completed successfully.";
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].0, "Windows.old");
         assert_eq!(previous_installs_bytes(&env), 1);
+    }
+
+    #[test]
+    fn component_store_is_only_analyzed_when_turned_on() {
+        let d = tempfile::tempdir().unwrap();
+        let m = ComponentStore {
+            meta: ModuleMeta::new("system.component_store", Category::System),
+        };
+        // Administrador pero sin activarlo en Ajustes: no se ejecuta DISM.
+        let ctx = ScanContext::new(Env::sandbox(d.path()), true);
+        assert!(!ctx.component_store);
+        assert!(m.scan(&ctx).unwrap().is_empty());
     }
 
     #[test]

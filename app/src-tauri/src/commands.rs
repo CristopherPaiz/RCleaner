@@ -231,6 +231,7 @@ pub fn save_settings(
         deletion_log: settings.deletion_log.min(DELETION_LOG_MAX),
         privacy: settings.privacy,
         check_updates: settings.check_updates,
+        component_store: settings.component_store,
     };
     let previous = lock(&state.settings).clone();
     if previous.autostart != settings.autostart {

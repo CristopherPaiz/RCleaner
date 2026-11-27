@@ -319,6 +319,17 @@
           {#each app.modes.filter((m) => m.id !== "rapido") as m (m.id)}<option value={m.id}>{m.name}</option>{/each}
         </select>
       </div>
+      <div class="item">
+        <span class="grow">
+          {t("ui.settings.component_store")}
+          <span class="faint block">{t("ui.settings.component_store_hint")}</span>
+        </span>
+        <Switch
+          checked={app.settings.component_store}
+          label={t("ui.settings.component_store")}
+          onchange={(v) => update({ component_store: v })}
+        />
+      </div>
     </div>
   </section>
 

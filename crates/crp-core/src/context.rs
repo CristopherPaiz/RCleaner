@@ -56,6 +56,8 @@ pub struct ScanContext {
     pub running: HashSet<String>,
     /// Incluir datos privados de los navegadores (cookies, historial).
     pub privacy: bool,
+    /// Analizar el almacén de componentes con DISM (lento, opcional).
+    pub component_store: bool,
 }
 
 impl ScanContext {
@@ -69,6 +71,7 @@ impl ScanContext {
             exclusions: Vec::new(),
             running: HashSet::new(),
             privacy: false,
+            component_store: false,
         }
     }
 
@@ -92,6 +95,7 @@ impl ScanContext {
         }
         self.exclusions = settings.exclusions.clone();
         self.privacy = settings.privacy;
+        self.component_store = settings.component_store;
         self
     }
 

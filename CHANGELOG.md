@@ -13,6 +13,12 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Superseded Windows updates** (DISM) are no longer analyzed by the Deep
+  mode unless you turn it on in Settings › Cleanup: the analysis takes 2–10
+  minutes and can't be cancelled halfway.
+
 ### Fixed
 
 - The window could open taller than the screen (or partly off it, after a

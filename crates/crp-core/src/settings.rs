@@ -97,6 +97,9 @@ pub struct Settings {
     pub privacy: bool,
     /// Buscar una versión nueva al abrir la app.
     pub check_updates: bool,
+    /// Analizar las actualizaciones sustituidas de Windows (DISM). Tarda
+    /// varios minutos, así que sólo si el usuario lo pide.
+    pub component_store: bool,
 }
 
 impl Default for Settings {
@@ -116,6 +119,7 @@ impl Default for Settings {
             deletion_log: DELETION_LOG_DEFAULT,
             privacy: false,
             check_updates: true,
+            component_store: false,
         }
     }
 }

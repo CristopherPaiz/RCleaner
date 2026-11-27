@@ -134,7 +134,7 @@
       },
       "component_store": {
         "name": "Superseded Windows updates",
-        "desc": "Removes from the component store (WinSxS) the old versions that later updates replaced, using Windows' DISM tool. Estimated size; it can take several minutes.",
+        "desc": "Removes from the component store (WinSxS) the old versions already replaced by later updates, using Windows' DISM tool. Takes several minutes: turn it on in Settings › Cleanup.",
         "label": "Superseded Windows updates (WinSxS)",
         "detail": "Done by Windows' DISM tool. Afterwards you can't uninstall the updates already installed. It can take several minutes."
       }
@@ -687,7 +687,9 @@
       "wizard": "Welcome wizard",
       "wizard_again": "Show again",
       "privacy": "Browser cookies and history",
-      "privacy_hint": "Shows them in Cleanup, inside each browser. Never marked automatically; passwords and bookmarks are not touched."
+      "privacy_hint": "Shows them in Cleanup, inside each browser. Never marked automatically; passwords and bookmarks are not touched.",
+      "component_store": "Analyze superseded Windows updates",
+      "component_store_hint": "With DISM, in Deep mode and as administrator. It takes a while (2 to 10 minutes) and can't be cancelled halfway, so it's off by default."
     },
     "menu": {
       "cut": "Cut",

@@ -134,7 +134,7 @@
       },
       "component_store": {
         "name": "Actualizaciones de Windows sustituidas",
-        "desc": "Quita del almacén de componentes (WinSxS) las versiones viejas que ya reemplazaron actualizaciones posteriores, con la herramienta DISM de Windows. Tamaño estimado; puede tardar varios minutos.",
+        "desc": "Quita del almacén de componentes (WinSxS) las versiones viejas que ya reemplazaron actualizaciones posteriores, con la herramienta DISM de Windows. Tarda varios minutos: actívalo en Ajustes › Limpieza.",
         "label": "Actualizaciones de Windows sustituidas (WinSxS)",
         "detail": "Lo hace la herramienta DISM de Windows. Después no podrás desinstalar las actualizaciones ya instaladas. Puede tardar varios minutos."
       }
@@ -687,7 +687,9 @@
       "wizard": "Asistente de bienvenida",
       "wizard_again": "Volver a verlo",
       "privacy": "Cookies e historial de navegadores",
-      "privacy_hint": "Los muestra en Limpieza, dentro de cada navegador. Nunca se marcan solos; contraseñas y marcadores no se tocan."
+      "privacy_hint": "Los muestra en Limpieza, dentro de cada navegador. Nunca se marcan solos; contraseñas y marcadores no se tocan.",
+      "component_store": "Analizar actualizaciones de Windows sustituidas",
+      "component_store_hint": "Con DISM, en el modo Profundo y como administrador. Tarda bastante (de 2 a 10 minutos) y no se puede cancelar a mitad, por eso viene apagado."
     },
     "menu": {
       "cut": "Cortar",

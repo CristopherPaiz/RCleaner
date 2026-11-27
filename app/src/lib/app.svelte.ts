@@ -38,6 +38,7 @@ class AppStore {
     onboarded: true,
     deletion_log: 10000,
     privacy: false,
+    component_store: false,
     check_updates: true,
   });
   /** Datos iniciales cargados (para ocultar la pantalla de carga). */

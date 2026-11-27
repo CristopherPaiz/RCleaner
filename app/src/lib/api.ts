@@ -98,6 +98,7 @@ export interface Settings {
   deletion_log: number;
   /** Ofrecer cookies e historial de los navegadores. */
   privacy: boolean;
+  component_store: boolean;
   /** Buscar una versión nueva al abrir la app. */
   check_updates: boolean;
 }
