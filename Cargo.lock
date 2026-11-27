@@ -726,7 +726,7 @@ checksum = "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6"
 
 [[package]]
 name = "crp-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -740,7 +740,7 @@ dependencies = [
 
 [[package]]
 name = "crp-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "dirs 7.0.0",
  "glob",
@@ -756,7 +756,7 @@ dependencies = [
 
 [[package]]
 name = "crp-disk"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "crp-core",
@@ -769,7 +769,7 @@ dependencies = [
 
 [[package]]
 name = "crp-modules"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "crp-core",
  "crp-platform",
@@ -782,7 +782,7 @@ dependencies = [
 
 [[package]]
 name = "crp-platform"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "png 0.18.1",
  "windows-sys 0.61.2",
@@ -2983,7 +2983,7 @@ dependencies = [
 
 [[package]]
 name = "rcleaner"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "crp-core",
