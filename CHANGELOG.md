@@ -13,6 +13,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-27
+
 ### Changed
 
 - **Superseded Windows updates** (DISM) are no longer analyzed by the Deep
@@ -178,7 +180,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 - `#![forbid(unsafe_code)]` in every crate except `crp-platform`, the only one
   that calls the Windows API.
 
-[Unreleased]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.2...v0.1.3
