@@ -20,7 +20,16 @@ $utf8 = New-Object System.Text.UTF8Encoding($false)
 
 function Read-Text($path) { [IO.File]::ReadAllText((Join-Path $root $path), $utf8) }
 function Write-Text($path, $text) { [IO.File]::WriteAllText((Join-Path $root $path), $text, $utf8) }
-function Invoke-Git { git -C $root @args; if ($LASTEXITCODE) { throw "git $args failed" } }
+# Native tools write progress to stderr. With 'Stop', Windows PowerShell turns
+# that into an error when output is redirected, so run them with 'Continue'
+# and check the exit code instead.
+function Invoke-Native {
+    $ErrorActionPreference = 'Continue'
+    $exe, $rest = $args
+    & $exe @rest 2>&1 | ForEach-Object { "$_" } | Out-Host
+    $LASTEXITCODE
+}
+function Invoke-Git { if (Invoke-Native git -C $root @args) { throw "git $args failed" } }
 
 # MSI only accepts plain numeric versions.
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.3 (got '$Version')" }
@@ -54,9 +63,10 @@ try {
     if ($LASTEXITCODE) { throw 'npm version failed' }
 }
 finally { Pop-Location }
-cargo update --workspace --offline --manifest-path (Join-Path $root 'Cargo.toml')
-if ($LASTEXITCODE) { cargo update --workspace --manifest-path (Join-Path $root 'Cargo.toml') }
-if ($LASTEXITCODE) { throw 'cargo update failed' }
+$manifest = Join-Path $root 'Cargo.toml'
+if (Invoke-Native cargo update --workspace --offline --manifest-path $manifest) {
+    if (Invoke-Native cargo update --workspace --manifest-path $manifest) { throw 'cargo update failed' }
+}
 
 # 3. Commit and tag
 Invoke-Git add CHANGELOG.md Cargo.toml Cargo.lock app/package.json app/package-lock.json
