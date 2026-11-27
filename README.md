@@ -72,7 +72,7 @@ never preselected and say so. As with any tool, keep backups of what matters.
 - **Overview** – how much you can free safely, a one-click quick clean and
   recommendations only when there's something to do (low disk space, a
   previous Windows installation, a full Recycle Bin, too many startup programs…).
-- **Cleanup** – 39 cleaners grouped into modes (plus your own custom modes),
+- **Cleanup** – 40 cleaners grouped into modes (plus your own custom modes),
   warnings when an app that locks its files is open, exclusions and
   restart-as-administrator for system folders.
 - **Space** – an interactive radial map of any drive or folder, the largest

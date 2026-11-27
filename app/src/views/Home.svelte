@@ -80,10 +80,11 @@
         run: () => openDrive(main),
       });
     }
-    if (status?.previous_windows) {
+    // Los restos pequeños de una actualización no merecen aviso.
+    if (status && status.previous_windows_bytes >= 500 * 1024 ** 2) {
       out.push({
         id: "winold", icon: "layers",
-        title: t("ui.home.rec_winold"),
+        title: t("ui.home.rec_winold", { size: formatBytes(status.previous_windows_bytes) }),
         text: t(app.info?.is_admin ? "ui.home.rec_winold_text" : "ui.home.rec_winold_admin"),
         run: () => openMode("profundo"),
       });
@@ -93,7 +94,7 @@
         id: "bin", icon: "trash",
         title: t("ui.home.rec_bin", { size: formatBytes(bin.bytes) }),
         text: t("ui.home.rec_bin_text"),
-        run: () => (app.view = "clean"),
+        run: openBin,
       });
     }
     if (status && status.startup_apps >= 6) {
@@ -126,6 +127,12 @@
   const statusText = $derived(
     recs.some((r) => r.warn) ? t("ui.home.status_warn") : junk >= GB ? t("ui.home.status_junk") : t("ui.home.status_ok"),
   );
+
+  /** La papelera está en el análisis actual o, si no, en el modo Rápido. */
+  function openBin() {
+    if (findings.some((f) => f.module_id === "system.recycle_bin")) app.view = "clean";
+    else openMode("rapido");
+  }
 
   function openDrive(d: Drive) {
     app.view = "space";

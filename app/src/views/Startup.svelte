@@ -24,12 +24,11 @@
   const q = $derived(query.trim().toLowerCase());
   const has = (...s: (string | null | undefined)[]) => !q || s.some((x) => x?.toLowerCase().includes(q));
 
-  // Activos primero; dentro, por nombre.
-  const shownApps = $derived(
-    (apps ?? [])
-      .filter((a) => has(a.name, a.command))
-      .sort((a, b) => Number(b.enabled) - Number(a.enabled) || a.name.localeCompare(b.name)),
-  );
+  // Activos primero y, dentro, por nombre. Se ordena al cargar: así una fila
+  // no salta de sitio al activarla o desactivarla.
+  const sortApps = (list: StartupApp[]) =>
+    list.sort((a, b) => Number(b.enabled) - Number(a.enabled) || a.name.localeCompare(b.name));
+  const shownApps = $derived((apps ?? []).filter((a) => has(a.name, a.command)));
   const shownTasks = $derived((tasks ?? []).filter((x) => has(x.name, x.folder, x.command, x.author)));
   const shownServices = $derived((services ?? []).filter((s) => has(s.display, s.name, s.description, s.path)));
   const appsOn = $derived((apps ?? []).filter((a) => a.enabled).length);
@@ -38,7 +37,7 @@
     if (!force && ((which === "apps" && apps) || (which === "tasks" && tasks) || (which === "services" && services))) return;
     loading = true;
     try {
-      if (which === "apps") apps = await api.startupApps();
+      if (which === "apps") apps = sortApps(await api.startupApps());
       else if (which === "tasks") tasks = await api.startupTasks();
       else services = await api.startupServices();
     } catch (e) {
@@ -59,18 +58,27 @@
       await run();
       after();
     } catch (e) {
-      app.error = String(e);
+      app.error = deniedMessage(String(e));
+      return false;
     } finally {
       busy = null;
     }
+    return true;
+  }
+
+  /** Windows responde "Acceso denegado" cuando hace falta administrador. */
+  function deniedMessage(msg: string) {
+    return /denied|denegado|0x80070005/i.test(msg) ? t("ui.startup.needs_admin") : msg;
   }
 
   const toggleApp = (a: StartupApp, on: boolean) =>
     act(a.id, () => api.setStartupApp(a.id, on), () => (a.enabled = on));
   const toggleTask = (x: StartupTask, on: boolean) =>
     act(x.id, () => api.setStartupTask(x.id, on), () => (x.enabled = on));
-  const setStart = (s: ServiceItem, start: string) =>
-    act(s.name, () => api.setServiceStart(s.name, start), () => (s.start = start));
+  async function setStart(s: ServiceItem, select: HTMLSelectElement) {
+    const ok = await act(s.name, () => api.setServiceStart(s.name, select.value), () => (s.start = select.value));
+    if (!ok) select.value = s.start;
+  }
 
   function appMenu(e: MouseEvent, a: StartupApp) {
     const items: (MenuEntry | false)[] = [
@@ -176,7 +184,7 @@
               value={["auto", "manual", "disabled"].includes(s.start) ? s.start : ""}
               disabled={!admin || busy === s.name}
               aria-label={s.display}
-              onchange={(e) => setStart(s, (e.currentTarget as HTMLSelectElement).value)}
+              onchange={(e) => setStart(s, e.currentTarget)}
             >
               {#if !["auto", "manual", "disabled"].includes(s.start)}<option value="" disabled>{s.start}</option>{/if}
               <option value="auto">{t("ui.startup.start_auto")}</option>

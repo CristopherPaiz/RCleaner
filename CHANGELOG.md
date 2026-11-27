@@ -13,6 +13,20 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+### Fixed
+
+- The window could open taller than the screen (or partly off it, after a
+  monitor change), hiding the bottom buttons behind the taskbar. It's now kept
+  inside the visible area.
+- Overview warned about a "previous Windows installation" for a few KB of
+  update leftovers. It now shows the real size and only warns from 500 MB.
+- Previous Windows: if `Windows.old` still holds personal files (Documents,
+  Desktop, Pictures…), the item now warns before you delete them.
+- Startup: a row no longer jumps to another place when you turn it on or off;
+  a service's start type goes back to its real value if the change fails;
+  tasks that need administrator say so instead of showing Windows' error.
+- Overview: "Review" on a full Recycle Bin opens an analysis that includes it.
+
 ## [0.1.5] - 2026-11-27
 
 ### Fixed

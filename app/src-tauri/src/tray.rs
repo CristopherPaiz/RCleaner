@@ -75,6 +75,7 @@ pub fn set_tooltip(app: &AppHandle, text: &str) {
 pub fn show(app: &AppHandle) {
     if let Some(w) = app.get_webview_window(MAIN) {
         let _ = w.unminimize();
+        fit_to_screen(&w);
         let _ = w.show();
         let _ = w.set_focus();
         return;
@@ -84,10 +85,53 @@ pub fn show(app: &AppHandle) {
     };
     match WebviewWindowBuilder::from_config(app, cfg).and_then(|b| b.build()) {
         Ok(w) => {
+            fit_to_screen(&w);
             let _ = w.set_focus();
         }
         Err(e) => eprintln!("no se pudo abrir la ventana: {e}"),
     }
+}
+
+/// Mete la ventana en el área visible del monitor (sin la barra de tareas).
+/// El tamaño por defecto o el que se guardó puede no caber en una pantalla
+/// pequeña, y entonces los botones de abajo quedan ocultos.
+fn fit_to_screen(w: &tauri::WebviewWindow) {
+    if w.is_maximized().unwrap_or(false) {
+        return;
+    }
+    let monitor = w
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| w.primary_monitor().ok().flatten());
+    let (Some(m), Ok(pos), Ok(size)) = (monitor, w.outer_position(), w.outer_size()) else {
+        return;
+    };
+    let (x, y, width, height) = fit(
+        (pos.x, pos.y, size.width as i32, size.height as i32),
+        (
+            m.work_area().position.x,
+            m.work_area().position.y,
+            m.work_area().size.width as i32,
+            m.work_area().size.height as i32,
+        ),
+    );
+    if (width, height) != (size.width as i32, size.height as i32) {
+        let _ = w.set_size(tauri::PhysicalSize::new(width as u32, height as u32));
+    }
+    if (x, y) != (pos.x, pos.y) {
+        let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+    }
+}
+
+/// Rectángulo `(x, y, ancho, alto)` metido dentro de `area`.
+fn fit(win: (i32, i32, i32, i32), area: (i32, i32, i32, i32)) -> (i32, i32, i32, i32) {
+    let (ax, ay, aw, ah) = area;
+    let width = win.2.min(aw);
+    let height = win.3.min(ah);
+    let x = win.0.clamp(ax, ax + aw - width);
+    let y = win.1.clamp(ay, ay + ah - height);
+    (x, y, width, height)
 }
 
 /// Cierra la ventana y deja la app en la bandeja con la mínima memoria. Si
@@ -144,4 +188,22 @@ pub fn keep_running(app: &AppHandle) -> bool {
     let state = app.state::<AppState>();
     let to_tray = state.to_tray.swap(false, Ordering::SeqCst);
     to_tray || lock(&state.settings).background.enabled
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fit;
+
+    #[test]
+    fn keeps_the_window_inside_the_work_area() {
+        let area = (0, 0, 1536, 816);
+        // Cabe: no cambia.
+        assert_eq!(fit((100, 50, 1240, 700), area), (100, 50, 1240, 700));
+        // Se sale por abajo: sube.
+        assert_eq!(fit((22, 67, 1254, 808), area), (22, 8, 1254, 808));
+        // Más alta que la pantalla: se ajusta al alto disponible.
+        assert_eq!(fit((0, -20, 1240, 900), area), (0, 0, 1240, 816));
+        // Fuera por la izquierda (otro monitor que ya no está).
+        assert_eq!(fit((-2000, 100, 1240, 700), area), (0, 100, 1240, 700));
+    }
 }

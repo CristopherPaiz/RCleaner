@@ -389,8 +389,8 @@ pub fn reveal(state: State<'_, AppState>, path: PathBuf) -> CmdResult<()> {
 
 #[derive(Serialize)]
 pub struct HomeStatus {
-    /// Hay una instalación anterior de Windows (`Windows.old`…).
-    previous_windows: bool,
+    /// Lo que ocupa la instalación anterior de Windows (`Windows.old`…).
+    previous_windows_bytes: u64,
     /// Programas habilitados al iniciar sesión.
     startup_apps: usize,
 }
@@ -399,7 +399,7 @@ pub struct HomeStatus {
 #[tauri::command]
 pub async fn home_status() -> CmdResult<HomeStatus> {
     tauri::async_runtime::spawn_blocking(|| HomeStatus {
-        previous_windows: !crp_modules::windows::previous_installs(&Env::from_system()).is_empty(),
+        previous_windows_bytes: crp_modules::windows::previous_installs_bytes(&Env::from_system()),
         startup_apps: crate::startup::enabled_apps(),
     })
     .await

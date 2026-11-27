@@ -129,7 +129,8 @@
           "windows_old": "Instalación anterior de Windows (Windows.old)",
           "upgrade": "Archivos de la actualización de Windows ($Windows.~BT)",
           "upgrade_media": "Medios de la actualización de Windows ($Windows.~WS)"
-        }
+        },
+        "user_files": "Dentro quedan archivos personales de la instalación anterior (Windows.old\\Users). Cópialos antes si los necesitas: se borrarán."
       },
       "component_store": {
         "name": "Actualizaciones de Windows sustituidas",
@@ -462,9 +463,9 @@
       "all_good_text": "No hay nada más que revisar ahora.",
       "rec_disk": "Queda poco espacio en {drive} ({pct} % libre)",
       "rec_disk_text": "Mira qué carpetas y archivos ocupan más.",
-      "rec_winold": "Hay una instalación anterior de Windows",
-      "rec_winold_text": "Windows.old suele ocupar entre 10 y 30 GB. Quitarla impide volver a la versión anterior.",
-      "rec_winold_admin": "Windows.old suele ocupar entre 10 y 30 GB. Para quitarla abre RCleaner como administrador.",
+      "rec_winold": "La instalación anterior de Windows ocupa {size}",
+      "rec_winold_text": "Quitarla libera ese espacio, pero ya no podrás volver a la versión anterior de Windows.",
+      "rec_winold_admin": "Para quitarla abre RCleaner como administrador. Después ya no podrás volver a la versión anterior.",
       "rec_bin": "La papelera ocupa {size}",
       "rec_bin_text": "Revísala antes de vaciarla: lo que hay dentro se elimina definitivamente.",
       "rec_startup_one": "1 programa se abre con Windows",

@@ -129,7 +129,8 @@
           "windows_old": "Previous Windows installation (Windows.old)",
           "upgrade": "Windows update files ($Windows.~BT)",
           "upgrade_media": "Windows update media ($Windows.~WS)"
-        }
+        },
+        "user_files": "It still holds personal files from the previous installation (Windows.old\\Users). Copy them first if you need them: they will be deleted."
       },
       "component_store": {
         "name": "Superseded Windows updates",
@@ -462,9 +463,9 @@
       "all_good_text": "Nothing else to check right now.",
       "rec_disk": "{drive} is running out of space ({pct} % free)",
       "rec_disk_text": "See which folders and files take the most space.",
-      "rec_winold": "There's a previous Windows installation",
-      "rec_winold_text": "Windows.old usually takes 10–30 GB. Removing it means you can't go back to the previous version.",
-      "rec_winold_admin": "Windows.old usually takes 10–30 GB. To remove it, open RCleaner as administrator.",
+      "rec_winold": "The previous Windows installation takes {size}",
+      "rec_winold_text": "Removing it frees that space, but you won't be able to go back to the previous Windows version.",
+      "rec_winold_admin": "To remove it, open RCleaner as administrator. You won't be able to go back to the previous version afterwards.",
       "rec_bin": "The Recycle Bin takes {size}",
       "rec_bin_text": "Check it before emptying it: what's inside is deleted for good.",
       "rec_startup_one": "1 program opens with Windows",

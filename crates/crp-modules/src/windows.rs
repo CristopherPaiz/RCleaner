@@ -6,11 +6,12 @@
 //! actualizaciones ya instaladas.
 
 use crp_core::Category;
+use crp_core::context::CancelToken;
 use crp_core::{
     Action, CleanOutcome, CleanerModule, Engine, Env, Error, Finding, ModuleMeta, Result, Risk,
     ScanContext, exec, fsutil, t,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Carpetas de la raíz del disco del sistema que deja una actualización.
 const PREVIOUS: &[(&str, &str)] = &[
@@ -52,6 +53,41 @@ pub fn previous_installs(env: &Env) -> Vec<(&'static str, &'static str, PathBuf)
         .collect()
 }
 
+/// Bytes que ocupan las instalaciones anteriores (sin administrador, al
+/// menos lo que se puede leer).
+pub fn previous_installs_bytes(env: &Env) -> u64 {
+    let cancel = CancelToken::default();
+    previous_installs(env)
+        .iter()
+        .map(|(_, _, p)| fsutil::measure_path(p, &cancel).bytes)
+        .sum()
+}
+
+/// Carpetas personales que pueden quedar en `Windows.old\Users\<nombre>`
+/// tras una instalación limpia o si algo no se migró.
+const USER_FOLDERS: &[&str] = &[
+    "Desktop",
+    "Documents",
+    "Downloads",
+    "Pictures",
+    "Music",
+    "Videos",
+];
+
+/// ¿Quedan archivos personales de la instalación anterior?
+fn has_user_files(windows_old: &Path) -> bool {
+    let Ok(users) = std::fs::read_dir(windows_old.join("Users")) else {
+        return false;
+    };
+    users.flatten().any(|u| {
+        USER_FOLDERS.iter().any(|f| {
+            std::fs::read_dir(u.path().join(f)).is_ok_and(|mut d| {
+                d.any(|e| e.is_ok_and(|e| !e.file_name().eq_ignore_ascii_case("desktop.ini")))
+            })
+        })
+    })
+}
+
 struct PreviousWindows {
     meta: ModuleMeta,
 }
@@ -70,6 +106,8 @@ impl CleanerModule for PreviousWindows {
             if stats.items == 0 {
                 continue;
             }
+            let warning = (key == "windows_old" && has_user_files(&path))
+                .then(|| t("module.system.windows_old.user_files"));
             out.push(Finding {
                 id: format!("{}:{key}", self.meta.id),
                 module_id: self.meta.id.clone(),
@@ -83,7 +121,7 @@ impl CleanerModule for PreviousWindows {
                 requires_admin: true,
                 selected: false,
                 age_days: None,
-                warning: None,
+                warning,
                 action: Action::Custom { key: dir.into() },
             });
         }
@@ -267,5 +305,19 @@ The operation completed successfully.";
         let found = previous_installs(&env);
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].0, "Windows.old");
+        assert_eq!(previous_installs_bytes(&env), 1);
+    }
+
+    #[test]
+    fn warns_about_personal_files_left_in_windows_old() {
+        let d = tempfile::tempdir().unwrap();
+        let old = d.path().join("Windows.old");
+        let docs = old.join("Users").join("ana").join("Documents");
+        fs::create_dir_all(&docs).unwrap();
+        fs::write(docs.join("desktop.ini"), b"x").unwrap();
+        assert!(!has_user_files(&old));
+        fs::write(docs.join("tesis.docx"), b"x").unwrap();
+        assert!(has_user_files(&old));
+        assert!(!has_user_files(d.path()));
     }
 }

@@ -76,7 +76,7 @@ ten copia de lo importante.
 - **Resumen**: cuánto puedes liberar sin riesgo, limpieza rápida de un clic y
   recomendaciones sólo cuando hay algo que hacer (poco espacio, una instalación
   anterior de Windows, la papelera llena, demasiados programas al arrancar…).
-- **Limpieza**: 39 limpiadores agrupados en modos (y los tuyos propios), aviso
+- **Limpieza**: 40 limpiadores agrupados en modos (y los tuyos propios), aviso
   cuando hay abierta una app que bloquea sus archivos, exclusiones y reinicio
   como administrador para carpetas del sistema.
 - **Espacio**: mapa radial navegable de cualquier unidad o carpeta, archivos más

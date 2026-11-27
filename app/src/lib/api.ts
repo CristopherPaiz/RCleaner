@@ -103,7 +103,7 @@ export interface Settings {
 }
 
 export interface HomeStatus {
-  previous_windows: boolean;
+  previous_windows_bytes: number;
   startup_apps: number;
 }
 
