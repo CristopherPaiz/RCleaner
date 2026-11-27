@@ -19,6 +19,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
   mode unless you tick "Include superseded Windows updates" under the mode
   picker in Cleanup: the analysis takes 2–10 minutes and can't be cancelled
   halfway.
+- The big Analyze/Search button now has a gently pulsing border while it's
+  waiting to be pressed (still with reduced motion).
 
 ### Fixed
 

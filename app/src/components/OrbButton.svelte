@@ -2,6 +2,7 @@
   // Botón principal de una herramienta. En reposo es una baldosa con el icono
   // y la acción ("Analizar"); al pulsarlo se convierte en círculo, aparece un
   // anillo girando alrededor y dentro el progreso. Pulsarlo otra vez detiene.
+  // En reposo, un borde late hacia fuera para indicar que hay que pulsarlo.
   import Icon from "./Icon.svelte";
   import { morph } from "../lib/motion";
   import { t } from "../lib/i18n.svelte";
@@ -21,6 +22,10 @@
 
 <div class="orb-wrap" style:--s="{size}px">
   {#if busy}<span class="ring" aria-hidden="true"></span>{/if}
+  {#if !busy && !disabled}
+    <span class="pulse" aria-hidden="true"></span>
+    <span class="pulse late" aria-hidden="true"></span>
+  {/if}
   <button
     class="orb"
     class:busy
@@ -104,6 +109,23 @@
   }
   .orb.busy:hover .center { transform: translateY(calc(var(--s) * -0.06)); }
   .orb.busy:hover .stop { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Borde que late: sale del botón y se desvanece, dos ondas desfasadas. */
+  .pulse {
+    position: absolute; inset: 0; border-radius: 30%; pointer-events: none;
+    border: 2px solid color-mix(in srgb, var(--a) 80%, var(--b));
+    animation: pulse 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+    opacity: 0;
+  }
+  .pulse.late { animation-delay: 1.2s; }
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(1.22); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse { animation: none; opacity: 0.5; transform: scale(1.06); }
+    .pulse.late { display: none; }
+  }
 
   .ring {
     position: absolute; inset: 2%; border-radius: 50%; pointer-events: none;
