@@ -134,7 +134,7 @@
       },
       "component_store": {
         "name": "Superseded Windows updates",
-        "desc": "Removes from the component store (WinSxS) the old versions already replaced by later updates, using Windows' DISM tool. Takes several minutes: turn it on in Settings › Cleanup.",
+        "desc": "Removes from the component store (WinSxS) the old versions already replaced by later updates, using Windows' DISM tool. Takes several minutes: turn it on when you pick the Deep mode in Cleanup.",
         "label": "Superseded Windows updates (WinSxS)",
         "detail": "Done by Windows' DISM tool. Afterwards you can't uninstall the updates already installed. It can take several minutes."
       }
@@ -512,7 +512,10 @@
       "restart": "Start over",
       "clean": "Clean",
       "where": "Looks on the system drive and your projects: {drives}",
-      "on_drives": "By drive"
+      "on_drives": "By drive",
+      "dism": "Include superseded Windows updates (DISM)",
+      "dism_hint": "It takes a while: 2 to 10 more minutes, and it can't be cancelled halfway.",
+      "dism_admin": "It takes a while (2 to 10 more minutes) and needs administrator."
     },
     "results": {
       "select_group": "Select {name}",
@@ -687,9 +690,7 @@
       "wizard": "Welcome wizard",
       "wizard_again": "Show again",
       "privacy": "Browser cookies and history",
-      "privacy_hint": "Shows them in Cleanup, inside each browser. Never marked automatically; passwords and bookmarks are not touched.",
-      "component_store": "Analyze superseded Windows updates",
-      "component_store_hint": "With DISM, in Deep mode and as administrator. It takes a while (2 to 10 minutes) and can't be cancelled halfway, so it's off by default."
+      "privacy_hint": "Shows them in Cleanup, inside each browser. Never marked automatically; passwords and bookmarks are not touched."
     },
     "menu": {
       "cut": "Cut",

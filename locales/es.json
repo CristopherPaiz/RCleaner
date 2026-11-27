@@ -134,7 +134,7 @@
       },
       "component_store": {
         "name": "Actualizaciones de Windows sustituidas",
-        "desc": "Quita del almacén de componentes (WinSxS) las versiones viejas que ya reemplazaron actualizaciones posteriores, con la herramienta DISM de Windows. Tarda varios minutos: actívalo en Ajustes › Limpieza.",
+        "desc": "Quita del almacén de componentes (WinSxS) las versiones viejas que ya reemplazaron actualizaciones posteriores, con la herramienta DISM de Windows. Tarda varios minutos: se activa al elegir el modo Profundo en Limpieza.",
         "label": "Actualizaciones de Windows sustituidas (WinSxS)",
         "detail": "Lo hace la herramienta DISM de Windows. Después no podrás desinstalar las actualizaciones ya instaladas. Puede tardar varios minutos."
       }
@@ -512,7 +512,10 @@
       "restart": "Empezar de nuevo",
       "clean": "Limpiar",
       "where": "Busca en el disco del sistema y en tus proyectos: {drives}",
-      "on_drives": "Por unidad"
+      "on_drives": "Por unidad",
+      "dism": "Incluir actualizaciones de Windows sustituidas (DISM)",
+      "dism_hint": "Tarda bastante: de 2 a 10 minutos más, y no se puede cancelar a mitad.",
+      "dism_admin": "Tarda bastante (de 2 a 10 minutos más) y necesita administrador."
     },
     "results": {
       "select_group": "Seleccionar {name}",
@@ -687,9 +690,7 @@
       "wizard": "Asistente de bienvenida",
       "wizard_again": "Volver a verlo",
       "privacy": "Cookies e historial de navegadores",
-      "privacy_hint": "Los muestra en Limpieza, dentro de cada navegador. Nunca se marcan solos; contraseñas y marcadores no se tocan.",
-      "component_store": "Analizar actualizaciones de Windows sustituidas",
-      "component_store_hint": "Con DISM, en el modo Profundo y como administrador. Tarda bastante (de 2 a 10 minutos) y no se puede cancelar a mitad, por eso viene apagado."
+      "privacy_hint": "Los muestra en Limpieza, dentro de cada navegador. Nunca se marcan solos; contraseñas y marcadores no se tocan."
     },
     "menu": {
       "cut": "Cortar",

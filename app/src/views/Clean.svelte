@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from "../lib/app.svelte";
   import { bulkPick } from "../lib/results";
+  import { isSelected } from "../lib/selectors";
   import { api, type Finding } from "../lib/api";
   import { formatBytes, formatCount, modeColors, splitBytes, splitPath } from "../lib/format";
   import ResultList from "../components/ResultList.svelte";
@@ -96,6 +97,18 @@
     return () => ro.disconnect();
   });
 
+  // Las actualizaciones sustituidas (DISM) tardan minutos en analizarse: se
+  // ofrecen aquí, sólo con los modos que las incluyen (Profundo), y vienen
+  // apagadas.
+  const offersDism = $derived(!!app.mode && isSelected(app.mode.modules, "system.component_store"));
+  async function setDism(on: boolean) {
+    try {
+      await app.saveSettings({ ...app.settings, component_store: on });
+    } catch (e) {
+      app.error = String(e);
+    }
+  }
+
   async function doClean() {
     confirming = false;
     await app.clean();
@@ -163,6 +176,22 @@
                   {app.mode?.description ?? ""}
                 </p>
               {/key}
+            </div>
+            <!-- Hueco fijo: el botón no se mueve al cambiar de modo -->
+            <div class="dism-slot">
+              {#if offersDism}
+                <label class="check dism" transition:fade={{ duration: 160 }}>
+                  <input
+                    type="checkbox"
+                    checked={app.settings.component_store}
+                    onchange={(e) => setDism(e.currentTarget.checked)}
+                  />
+                  <span>
+                    {t("ui.clean.dism")}
+                    <span class="faint block">{t(app.info?.is_admin ? "ui.clean.dism_hint" : "ui.clean.dism_admin")}</span>
+                  </span>
+                </label>
+              {/if}
             </div>
           </div>
         </div>
@@ -312,6 +341,10 @@
   .modes { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 100%; }
   .desc { display: grid; width: 60ch; max-width: 100%; height: 4.5em; line-height: 1.5; font-size: 13px; }
   .desc p { grid-area: 1 / 1; margin: 0; }
+  .dism-slot { min-height: 40px; display: flex; justify-content: center; }
+  .check { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; cursor: pointer; text-align: left; max-width: 60ch; }
+  .check input { margin-top: 3px; }
+  .block { display: block; font-size: 12px; margin-top: 2px; }
   .modes .segmented { flex-wrap: wrap; justify-content: center; }
   .meter { width: 260px; height: 4px; border-radius: 99px; background: var(--line-2); overflow: hidden; margin-top: 14px; }
   .meter > div { height: 100%; background: linear-gradient(90deg, var(--a), var(--b)); transition: width 0.25s; }

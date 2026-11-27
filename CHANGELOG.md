@@ -16,8 +16,9 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 ### Changed
 
 - **Superseded Windows updates** (DISM) are no longer analyzed by the Deep
-  mode unless you turn it on in Settings › Cleanup: the analysis takes 2–10
-  minutes and can't be cancelled halfway.
+  mode unless you tick "Include superseded Windows updates" under the mode
+  picker in Cleanup: the analysis takes 2–10 minutes and can't be cancelled
+  halfway.
 
 ### Fixed
 
