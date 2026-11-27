@@ -13,6 +13,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-27
+
 ### Added
 
 - **Startup** tab: programs that open when you sign in, scheduled tasks and
@@ -145,7 +147,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 - `#![forbid(unsafe_code)]` in every crate except `crp-platform`, the only one
   that calls the Windows API.
 
-[Unreleased]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/CristopherPaiz/RCleaner/compare/v0.1.0...v0.1.1
