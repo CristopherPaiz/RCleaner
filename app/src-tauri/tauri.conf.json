@@ -31,7 +31,6 @@
   "bundle": {
     "active": true,
     "targets": [
-      "msi",
       "nsis"
     ],
     "category": "Utility",
@@ -47,12 +46,6 @@
       "webviewInstallMode": {
         "type": "embedBootstrapper",
         "silent": true
-      },
-      "wix": {
-        "language": [
-          "en-US",
-          "es-ES"
-        ]
       },
       "nsis": {
         "languages": [

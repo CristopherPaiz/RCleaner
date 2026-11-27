@@ -31,7 +31,7 @@ function Invoke-Native {
 }
 function Invoke-Git { if (Invoke-Native git -C $root @args) { throw "git $args failed" } }
 
-# MSI only accepts plain numeric versions.
+# Plain numeric versions only (X.Y.Z).
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.3 (got '$Version')" }
 if ((git -C $root branch --show-current) -ne 'main') { throw 'Releases are made from main' }
 if (git -C $root status --porcelain) { throw 'Commit or stash your changes first' }

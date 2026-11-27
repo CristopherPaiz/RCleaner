@@ -21,8 +21,9 @@ struct UpdateProgress {
     total: Option<u64>,
 }
 
-/// Instalada con MSI (Program Files) o NSIS (junto a `uninstall.exe`). La
-/// portable no se reemplaza a sí misma: abrirá la página de descargas.
+/// Instalada con el setup (deja `uninstall.exe` junto al exe; las versiones
+/// antiguas con MSI, en Program Files). La portable no se reemplaza a sí
+/// misma: abrirá la página de descargas.
 fn installed() -> bool {
     if cfg!(debug_assertions) {
         return false;

@@ -12,8 +12,8 @@
 | Tauri CLI | 2.x | `cargo install tauri-cli --version "^2" --locked` |
 | WebView2 | runtime | Ya viene en Windows 10/11; los instaladores lo añaden si falta (abajo) |
 
-WiX (para MSI) y NSIS (para EXE) **no hace falta instalarlos**: la CLI de Tauri
-los descarga sola la primera vez que generas un bundle (necesita internet).
+NSIS (el generador del instalador) **no hace falta instalarlo**: la CLI de
+Tauri lo descarga sola la primera vez que generas un bundle (necesita internet).
 
 > Si `cargo test` falla con *"rustdoc … is not applicable"*, tu toolchain está
 > incompleto: `rustup component add rustc rust-std` o reinstala con
@@ -49,10 +49,8 @@ o `rcl` desde ahí.
 ## 3. Builds de producción
 
 ```powershell
-.\scripts\build.ps1                 # npm ci + MSI + EXE
+.\scripts\build.ps1                 # npm ci + instalador
 .\scripts\build.ps1 -SkipInstall    # sin reinstalar node_modules
-.\scripts\build.ps1 -Target msi     # sólo MSI
-.\scripts\build.ps1 -Target nsis    # sólo EXE
 ```
 
 Equivale a `cd app; cargo tauri build`. Resultados:
@@ -60,8 +58,7 @@ Equivale a `cd app; cargo tauri build`. Resultados:
 | Tipo | Ruta | Uso |
 |---|---|---|
 | Ejecutable portable | `target\release\rcleaner.exe` | Sin instalar (requiere WebView2); se publica en cada release como `RCleaner_<versión>_x64-portable.exe` |
-| MSI (WiX) | `target\release\bundle\msi\RCleaner_<ver>_x64_es-ES.msi` | Empresas / GPO / `msiexec /i … /qn` |
-| EXE (NSIS) | `target\release\bundle\nsis\RCleaner_<ver>_x64-setup.exe` | Instalador normal para usuarios |
+| Instalador (NSIS) | `target\release\bundle\nsis\RCleaner_<ver>_x64-setup.exe` | Instalador normal; pregunta el idioma. Silencioso: `/S` |
 | CLI | `target\release\rcl.exe` (`cargo build -r -p crp-cli`) | Scripts / tareas programadas |
 
 El perfil `release` usa LTO completo, `codegen-units = 1` y `strip` para un
@@ -74,7 +71,7 @@ se encargan de ellas:
 
 - **WebView2** (el motor de Edge con el que Tauri dibuja la interfaz): viene
   con Windows 11 y con Windows 10 actualizado. `webviewInstallMode` es
-  `embedBootstrapper`: el MSI/EXE llevan sólo el pequeño instalador de
+  `embedBootstrapper`: el instalador lleva sólo el pequeño instalador de
   Microsoft (~2 MB) y, si el PC no tiene WebView2, lo descargan e instalan en
   silencio (ese caso raro necesita internet). Así los instaladores pesan unos
   pocos MB; con `offlineInstaller` pasarían a ~285 MB.
@@ -89,9 +86,10 @@ Se toma de `[workspace.package] version` en el `Cargo.toml` raíz.
 `scripts/release.ps1` la cambia por ti (ver [Publicar versiones](#publicar-versiones)).
 
 ### Idioma del instalador
-`app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language`
-(`["en-US", "es-ES"]`: un MSI por idioma) y `bundle.windows.nsis.languages`
-(`["English", "Spanish"]`: un setup que pregunta, con el del sistema preelegido).
+Un solo setup para todos los idiomas: `app/src-tauri/tauri.conf.json` →
+`bundle.windows.nsis.languages` (`["English", "Spanish"]`) con
+`displayLanguageSelector`, así que pregunta al empezar con el idioma del
+sistema preelegido. No hay MSI: WiX genera un archivo por idioma.
 
 ### Llave de firma del actualizador
 El actualizador de la app sólo instala archivos firmados con la llave cuya
@@ -140,20 +138,19 @@ GitHub compila y publica las versiones (releases); las notas salen de
    `-NoPush` puedes revisarlo antes y luego `git push origin main v0.2.0`.
 3. La etiqueta lanza [`.github/workflows/release.yml`](../.github/workflows/release.yml):
    comprueba que la etiqueta coincide con `Cargo.toml` y que el changelog tiene
-   la sección, compila los instaladores (un MSI por idioma y un setup.exe
-   bilingüe) y el exe portable, los firma para el actualizador y crea la
+   la sección, compila el setup.exe bilingüe y el exe portable, los firma para el actualizador y crea la
    release de GitHub con esos archivos, `latest.json` y esa sección como notas
    (~15 min). Las copias instaladas ven la versión nueva por
    `releases/latest/download/latest.json`.
 
-Las versiones deben ser `X.Y.Z` sin sufijos (el MSI no acepta `-beta`).
+Las versiones deben ser `X.Y.Z` sin sufijos.
 
 ## 4. Solución de problemas
 
 | Síntoma | Causa / solución |
 |---|---|
 | `frontendDist ... doesn't exist` al compilar la app | Ejecuta `npm run build` en `app/` o usa `cargo tauri build/dev` (lo hace solo). `cargo build` a secas sólo compila las crates. |
-| Falla la descarga de WiX/NSIS | Sin internet o proxy. Descarga manual: ver docs de Tauri "Windows Installer". |
+| Falla la descarga de NSIS | Sin internet o proxy. Descarga manual: ver docs de Tauri "Windows Installer". |
 | `link.exe not found` | Faltan las Build Tools de VS con C++. |
 | `Found version mismatched Tauri packages` | El crate `tauri` y el paquete npm `@tauri-apps/api` deben compartir *major.minor*. Mira `grep -A1 'name = "tauri"$' Cargo.lock` y fija `@tauri-apps/api` a esa minor en `app/package.json` (p. ej. `~2.11.1`). Al subir Tauri, sube ambos a la vez. |
 | Muchos "omitidos" al limpiar | Archivos en uso (navegador/editor abiertos) o sin permisos: cierra apps o ejecuta como admin. |

@@ -12,7 +12,7 @@ de usuario (rápido, programador, IA, gamer, profundo).
 | Tema | Elección | Por qué |
 |---|---|---|
 | Lenguaje | Rust 2024 (stable) | Rápido, binario único, sin GC, seguro en memoria. |
-| GUI | **Tauri 2** + Svelte 5 + Vite | Binario ~10 MB (usa WebView2 del sistema), UI moderna, genera **MSI (WiX)** y **EXE (NSIS)** con un comando. Tauri 3 sigue en alpha: no se usa. |
+| GUI | **Tauri 2** + Svelte 5 + Vite | Binario ~10 MB (usa WebView2 del sistema), UI moderna, genera el instalador **NSIS** con un comando. Tauri 3 sigue en alpha: no se usa. |
 | Paralelismo | `rayon` | Escaneo de módulos y medición de carpetas en paralelo. |
 | Recorrido FS | `walkdir` (sin seguir enlaces) | No entra en junctions/symlinks → nunca borra fuera de la ruta. |
 | Win32 | `windows-sys` | FFI mínima: admin, papelera, (luego) registro, puntos de restauración. |

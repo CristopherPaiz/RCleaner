@@ -12,7 +12,7 @@ profiles (quick, developer, AI, gamer, deep).
 | Topic | Choice | Why |
 |---|---|---|
 | Language | Rust 2024 (stable) | Fast, single binary, no GC, memory safe. |
-| GUI | **Tauri 2** + Svelte 5 + Vite | ~10 MB binary (uses the system's WebView2), modern UI, builds **MSI (WiX)** and **EXE (NSIS)** with one command. Tauri 3 is still in alpha: not used. |
+| GUI | **Tauri 2** + Svelte 5 + Vite | ~10 MB binary (uses the system's WebView2), modern UI, builds the **NSIS** installer with one command. Tauri 3 is still in alpha: not used. |
 | Parallelism | `rayon` | Module scans and folder sizing in parallel. |
 | FS walking | `walkdir` (doesn't follow links) | Never enters junctions/symlinks → never deletes outside the path. |
 | Win32 | `windows-sys` | Minimal FFI: admin, Recycle Bin, (later) registry, restore points. |

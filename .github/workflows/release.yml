@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing a tag like v0.2.0 builds the installers and the portable exe and
+# Pushing a tag like v0.2.0 builds the installer and the portable exe and
 # publishes a GitHub release whose notes are the "## [0.2.0]" section of CHANGELOG.md.
 # Create the tag with scripts/release.ps1 (see docs/BUILD.md#releases).
 
@@ -81,9 +81,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $v = '${{ steps.notes.outputs.version }}'
-          # One MSI per language (en-US, es-ES) and one NSIS setup with both.
-          $files = @(Get-ChildItem target/release/bundle -Recurse -Include "RCleaner_${v}_*.msi", "RCleaner_${v}_*-setup.exe")
-          if ($files.Count -lt 3) { throw 'Installers not found' }
+          # One setup that asks for the language (English / Spanish).
+          $files = @(Get-ChildItem target/release/bundle -Recurse -Include "RCleaner_${v}_*-setup.exe")
+          if ($files.Count -lt 1) { throw 'Installer not found' }
           # Portable build: the same exe the installers ship, runs without installing.
           $portable = "RCleaner_${v}_x64-portable.exe"
           Copy-Item target/release/rcleaner.exe $portable
@@ -91,12 +91,10 @@ jobs:
 
           # latest.json for the in-app updater (only when the build was signed).
           $nsis = $files | Where-Object Name -like '*-setup.exe' | Select-Object -First 1
-          $msi = $files | Where-Object Name -like '*_en-US.msi' | Select-Object -First 1
           if (Test-Path "$($nsis.FullName).sig") {
             $base = 'https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}'
             $entry = { param($f) [ordered]@{ signature = (Get-Content "$($f.FullName).sig" -Raw).Trim(); url = "$base/$($f.Name)" } }
             $platforms = [ordered]@{ 'windows-x86_64' = & $entry $nsis; 'windows-x86_64-nsis' = & $entry $nsis }
-            if ($msi -and (Test-Path "$($msi.FullName).sig")) { $platforms['windows-x86_64-msi'] = & $entry $msi }
             [ordered]@{
               version   = $v
               notes     = (Get-Content release-notes.md -Raw).Trim()

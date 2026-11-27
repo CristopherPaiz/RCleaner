@@ -25,8 +25,8 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 - **Automatic updates**: RCleaner checks GitHub for a new version on start
   (can be turned off in Settings › About) and installs it with one click;
   the portable version links to the download instead.
-- Installers in **English** too: an MSI per language and a setup that asks
-  which language to use.
+- The installer is in **English** too: a single setup that asks which
+  language to use.
 - Optional **browser cookies and history** (Settings › Security). Off by
   default, never marked automatically; passwords, bookmarks and forms are
   never touched.
@@ -41,6 +41,12 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 - Cleanup groups browsers: each browser is one entry with its own list of
   options, which can be marked or collapsed together.
 - "All" and group checkboxes never mark user data (cookies, history, models).
+
+### Removed
+
+- The MSI installer: the setup (`…-setup.exe`) covers every language in one
+  file. If you installed an MSI version, uninstall it before installing this
+  one (Settings › Apps), or you'll have two copies.
 
 ### Fixed
 

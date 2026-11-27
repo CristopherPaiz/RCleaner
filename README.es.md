@@ -54,8 +54,8 @@ en [docs/MODULES.es.md](docs/MODULES.es.md).
 
 ## Instalar
 
-Descarga el instalador **MSI** o **EXE** más reciente desde la página de
-Releases. Funciona en Windows 10 y 11 sin internet ni descargas extra: el
+Descarga el instalador más reciente (`…-setup.exe`, pregunta inglés o
+español) o el exe portable desde la página de Releases. Funciona en Windows 10 y 11 sin internet ni descargas extra: el
 instalador trae todo lo que necesita (ver [docs/BUILD.es.md](docs/BUILD.es.md#instaladores-autónomos)).
 
 Tus ajustes están en `%APPDATA%\RCleaner\` (`settings.json`, `history.json`,
@@ -75,7 +75,7 @@ cd app; npm install
 cargo tauri dev                                    # app con recarga en caliente
 ```
 
-Instaladores (MSI y EXE NSIS): `.\scripts\build.ps1`. Más en
+Instalador (NSIS) y exe portable: `.\scripts\build.ps1`. Más en
 [docs/BUILD.es.md](docs/BUILD.es.md).
 
 ## CLI
@@ -104,7 +104,7 @@ crates/
   crp-cli/       binario `rcl`
 app/
   src/           UI Svelte 5 + TypeScript
-  src-tauri/     backend Tauri 2 (comandos, estado, bundle MSI/NSIS)
+  src-tauri/     backend Tauri 2 (comandos, estado, bundle NSIS)
 locales/         traducciones compartidas por la app, el motor y la CLI
 docs/            roadmap, arquitectura, módulos, diseño, build, traducir
 ```

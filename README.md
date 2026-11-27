@@ -54,7 +54,8 @@ environments). The full list is in [docs/MODULES.md](docs/MODULES.md).
 
 ## Install
 
-Download the latest **MSI** or **EXE** installer from the Releases page.
+Download the latest installer (`…-setup.exe`, asks for English or Spanish)
+or the portable exe from the Releases page.
 Works on Windows 10 and 11 without internet or extra downloads: the installer
 brings everything it needs (see [docs/BUILD.md](docs/BUILD.md#self-contained-installers)).
 
@@ -75,7 +76,7 @@ cd app; npm install
 cargo tauri dev                                    # desktop app with hot reload
 ```
 
-Installers (MSI and NSIS EXE): `.\scripts\build.ps1`. More in
+Installer (NSIS) and portable exe: `.\scripts\build.ps1`. More in
 [docs/BUILD.md](docs/BUILD.md).
 
 ## CLI
@@ -107,7 +108,7 @@ crates/
   crp-cli/       the `rcl` binary
 app/
   src/           Svelte 5 + TypeScript UI
-  src-tauri/     Tauri 2 backend (commands, state, MSI/NSIS bundle)
+  src-tauri/     Tauri 2 backend (commands, state, NSIS bundle)
 locales/         translations shared by the app, the engine and the CLI
 docs/            roadmap, architecture, modules, design, build, translating
 ```
