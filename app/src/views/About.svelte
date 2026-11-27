@@ -99,7 +99,8 @@
 </div>
 
 <style>
-  .page { flex: 1; overflow: auto; padding: 4px 32px 40px; display: flex; flex-direction: column; gap: 30px; max-width: 900px; width: 100%; margin: 0 auto; }
+  .page { flex: 1; min-height: 0; overflow: auto; padding: 4px 32px 40px; display: flex; flex-direction: column; gap: 30px; max-width: 900px; width: 100%; margin: 0 auto; }
+  .page > * { flex-shrink: 0; }
   h2 { font-size: 15px; margin-bottom: 10px; }
   .small { font-size: 12px; margin-top: 4px; }
   .hero { display: flex; align-items: center; gap: 22px; padding-top: 8px; }

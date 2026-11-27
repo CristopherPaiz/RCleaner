@@ -445,7 +445,8 @@
 {/if}
 
 <style>
-  .page { flex: 1; overflow: auto; padding: 4px 32px 40px; display: flex; flex-direction: column; gap: 28px; max-width: 900px; width: 100%; margin: 0 auto; }
+  .page { flex: 1; min-height: 0; overflow: auto; padding: 4px 32px 40px; display: flex; flex-direction: column; gap: 28px; max-width: 900px; width: 100%; margin: 0 auto; }
+  .page > * { flex-shrink: 0; }
   header h1 { font-size: 28px; margin-bottom: 4px; }
   h2 { font-size: 15px; margin-bottom: 4px; }
   section > h2 { margin-bottom: 10px; }

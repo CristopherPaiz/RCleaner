@@ -110,7 +110,8 @@
 </div>
 
 <style>
-  .page { flex: 1; overflow: auto; padding: 4px 32px 32px; display: flex; flex-direction: column; gap: 18px; max-width: 900px; width: 100%; margin: 0 auto; }
+  .page { flex: 1; min-height: 0; overflow: auto; padding: 4px 32px 32px; display: flex; flex-direction: column; gap: 18px; max-width: 900px; width: 100%; margin: 0 auto; }
+  .page > * { flex-shrink: 0; }
   .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
   .head h1 { font-size: 28px; margin-bottom: 4px; }
   .acts { display: flex; gap: 8px; }

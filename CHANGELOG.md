@@ -13,6 +13,12 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Startup list (and long pages in Settings and Exclusions) couldn't be
+  scrolled: the list shrank to the window height instead of scrolling. A new
+  test checks every view for this layout mistake.
+
 ## [0.1.4] - 2026-11-27
 
 ### Added

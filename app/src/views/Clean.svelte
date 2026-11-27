@@ -285,9 +285,10 @@
 
 <style>
   .stage {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: safe center;
     gap: 10px; padding: 0 32px; text-align: center; min-height: 0; overflow: auto;
   }
+  .stage > * { flex-shrink: 0; }
   .stage h1 { font-size: 30px; margin-top: 26px; }
   .stage { padding-bottom: 40px; }
   .info { display: grid; width: 100%; min-height: 270px; }

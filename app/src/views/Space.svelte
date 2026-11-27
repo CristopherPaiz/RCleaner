@@ -409,9 +409,10 @@
 
 <style>
   .stage {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: safe center;
     gap: 10px; padding: 0 32px 40px; text-align: center; min-height: 0; overflow: auto;
   }
+  .stage > * { flex-shrink: 0; }
   .stage h1 { font-size: 30px; margin-top: 22px; }
   .lead { font-size: 15px; max-width: 56ch; }
   .unit { font-size: 0.5em; font-weight: 500; color: var(--text-2); margin-left: 6px; }
