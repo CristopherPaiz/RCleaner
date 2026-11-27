@@ -96,6 +96,22 @@ export interface Settings {
   onboarded: boolean;
   /** Borrados que se guardan en el registro (0 = no guardar). */
   deletion_log: number;
+  /** Ofrecer cookies e historial de los navegadores. */
+  privacy: boolean;
+  /** Buscar una versión nueva al abrir la app. */
+  check_updates: boolean;
+}
+
+export interface UpdateInfo {
+  version: string;
+  notes: string | null;
+  /** `false` en la versión portable: se ofrece descargar. */
+  installable: boolean;
+}
+
+export interface UpdateProgress {
+  done: number;
+  total: number | null;
 }
 
 export interface ExclusionSize {
@@ -292,6 +308,10 @@ export const api = {
   cancel: (task: Task = "clean") => invoke<void>("cancel", { task }),
   reveal: (path: string) => invoke<void>("reveal", { path }),
   restartAsAdmin: () => invoke<void>("restart_as_admin"),
+  checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
+  installUpdate: () => invoke<void>("install_update"),
+  onUpdateProgress: (cb: (p: UpdateProgress) => void): Promise<UnlistenFn> =>
+    listen<UpdateProgress>("crp://update", (e) => cb(e.payload)),
 
   diskScan: (path: string) => invoke<DiskSummary>("disk_scan", { path }),
   diskSummary: () => invoke<DiskSummary | null>("disk_summary"),

@@ -229,6 +229,8 @@ pub fn save_settings(
         allow_system: settings.allow_system,
         onboarded: settings.onboarded,
         deletion_log: settings.deletion_log.min(DELETION_LOG_MAX),
+        privacy: settings.privacy,
+        check_updates: settings.check_updates,
     };
     let previous = lock(&state.settings).clone();
     if previous.autostart != settings.autostart {

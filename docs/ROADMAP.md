@@ -83,7 +83,7 @@ profiles (quick, developer, AI, gamer, deep).
 ### Phase 6 — Maintenance
 - Startup programs, scheduled tasks, services.
 - Scheduled cleanup (Task Scheduler), `DISM /StartComponentCleanup`, `Windows.old`.
-- Disk health, app updates, code signing, zero telemetry.
+- Disk health, code signing, zero telemetry.
 
 ## What we will NOT do (on purpose)
 - Delete **Prefetch**: it slows down startup; Windows manages it.

@@ -93,6 +93,10 @@ pub struct Settings {
     /// Cuántos borrados guardar en `deleted.log` (los más recientes).
     /// `0` = no guardar registro.
     pub deletion_log: u32,
+    /// Ofrecer cookies e historial de los navegadores (nunca premarcados).
+    pub privacy: bool,
+    /// Buscar una versión nueva al abrir la app.
+    pub check_updates: bool,
 }
 
 impl Default for Settings {
@@ -110,6 +114,8 @@ impl Default for Settings {
             allow_system: false,
             onboarded: false,
             deletion_log: DELETION_LOG_DEFAULT,
+            privacy: false,
+            check_updates: true,
         }
     }
 }

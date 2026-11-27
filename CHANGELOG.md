@@ -22,16 +22,30 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 - Space › Types: clicking a file type lists the largest files of that type.
 - Deletion log: choose how many entries to keep (or none) and clear it; both
   ask for confirmation before deleting entries.
+- **Automatic updates**: RCleaner checks GitHub for a new version on start
+  (can be turned off in Settings › About) and installs it with one click;
+  the portable version links to the download instead.
+- Installers in **English** too: an MSI per language and a setup that asks
+  which language to use.
+- Optional **browser cookies and history** (Settings › Security). Off by
+  default, never marked automatically; passwords, bookmarks and forms are
+  never touched.
+- The window remembers its size, position and maximized state, also when it
+  comes back from the tray.
 
 ### Changed
 
 - Hovering the radial chart or the treemap highlights that item in the list
   and dims the rest.
 - Cleanup shows which drives it looks at and how much is selected on each.
+- Cleanup groups browsers: each browser is one entry with its own list of
+  options, which can be marked or collapsed together.
+- "All" and group checkboxes never mark user data (cookies, history, models).
 
 ### Fixed
 
 - Menus opened near the right edge of the window were cut off.
+- Home: the total freed showed the plural text for a single cleanup's key.
 
 ## [0.1.2] - 2026-11-27
 

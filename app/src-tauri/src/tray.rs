@@ -12,6 +12,7 @@ use std::time::Duration;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, WebviewWindowBuilder, Window, WindowEvent, Wry};
+use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 const TRAY_ID: &str = "rcleaner";
 const MAIN: &str = "main";
@@ -101,6 +102,8 @@ pub fn hide(app: &AppHandle) {
         return;
     }
     state.to_tray.store(true, Ordering::SeqCst);
+    // Guardar tamaño y posición antes de destruirla (se restauran al volver).
+    let _ = app.save_window_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);
     let _ = w.destroy();
 }
 

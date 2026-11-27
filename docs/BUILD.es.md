@@ -38,7 +38,8 @@ cargo tauri dev
 `cargo tauri dev` lanza `npm run dev` (Vite en `http://localhost:1420`) y abre
 la ventana nativa. La consola muestra los `println!`/errores de Rust.
 
-Comprobación de tipos del frontend: `npm run check` (dentro de `app/`).
+Comprobación de tipos del frontend: `npm run check`; pruebas de la interfaz
+(Vitest + jsdom, Tauri simulado en `src/test/`): `npm test`. Ambos dentro de `app/`.
 
 ### Probar como administrador
 Algunos módulos (`system.windows_temp`, Windows Update, logs…) requieren
@@ -88,8 +89,23 @@ Se toma de `[workspace.package] version` en el `Cargo.toml` raíz.
 `scripts/release.ps1` la cambia por ti (ver [Publicar versiones](#publicar-versiones)).
 
 ### Idioma del instalador
-`app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language` (`es-ES`) y
-`bundle.windows.nsis.languages` (`Spanish`).
+`app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language`
+(`["en-US", "es-ES"]`: un MSI por idioma) y `bundle.windows.nsis.languages`
+(`["English", "Spanish"]`: un setup que pregunta, con el del sistema preelegido).
+
+### Llave de firma del actualizador
+El actualizador de la app sólo instala archivos firmados con la llave cuya
+mitad pública es `plugins.updater.pubkey` en `tauri.conf.json`. La privada vive
+fuera del repo (`%USERPROFILE%\.tauri\rcleaner.key`); guarda una copia: sin
+ella las copias instaladas ya no se pueden actualizar. GitHub la necesita como
+secretos del repositorio (Settings › Secrets and variables › Actions):
+
+- `TAURI_SIGNING_PRIVATE_KEY`: el contenido de `rcleaner.key`.
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: su contraseña (omítelo si no tiene).
+
+Sin el secreto la release se compila igual, pero sin `latest.json`, así que esa
+versión no se ofrecerá como actualización. Una llave nueva
+(`cargo tauri signer generate -w <ruta>`) obliga a cambiar también `pubkey`.
 
 ### Icono
 Edita `app/app-icon.png` y regenera: `cd app; cargo tauri icon app-icon.png -o src-tauri/icons`.
@@ -124,8 +140,11 @@ GitHub compila y publica las versiones (releases); las notas salen de
    `-NoPush` puedes revisarlo antes y luego `git push origin main v0.2.0`.
 3. La etiqueta lanza [`.github/workflows/release.yml`](../.github/workflows/release.yml):
    comprueba que la etiqueta coincide con `Cargo.toml` y que el changelog tiene
-   la sección, compila los instaladores MSI y EXE y crea la release de GitHub
-   con ambos archivos y esa sección como notas (~15 min).
+   la sección, compila los instaladores (un MSI por idioma y un setup.exe
+   bilingüe) y el exe portable, los firma para el actualizador y crea la
+   release de GitHub con esos archivos, `latest.json` y esa sección como notas
+   (~15 min). Las copias instaladas ven la versión nueva por
+   `releases/latest/download/latest.json`.
 
 Las versiones deben ser `X.Y.Z` sin sufijos (el MSI no acepta `-beta`).
 

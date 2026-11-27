@@ -194,4 +194,7 @@ system theme and for `data-theme="light"`.
 
 - Unit tests in every module with `Env::sandbox(tempdir)`: they never touch real paths.
 - `cargo test` = core + platform + modules + disk + cli.
-- Frontend: `cd app; npm run check` (svelte-check, strict TypeScript).
+- Frontend: `cd app; npm run check` (svelte-check, strict TypeScript) and
+  `npm test` (Vitest + jsdom: helpers, complete translations in every
+  language, updates and the results list; `invoke` mocked in
+  `src/test/tauri.ts`).

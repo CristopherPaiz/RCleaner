@@ -23,7 +23,7 @@ jobs:
       - run: cargo test --workspace --exclude rcleaner
 
   ui:
-    name: UI (svelte-check, build)
+    name: UI (svelte-check, tests, build)
     runs-on: windows-latest
     defaults:
       run:
@@ -37,4 +37,5 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
       - run: npx svelte-check --threshold warning
+      - run: npm test
       - run: npm run build

@@ -21,6 +21,8 @@
   import { menu, textMenu } from "./lib/menu.svelte";
   import { nav } from "./lib/nav.svelte";
   import { activity } from "./lib/activity.svelte";
+  import { update } from "./lib/update.svelte";
+  import UpdateDialog from "./components/UpdateDialog.svelte";
 
   let elevating = $state(false);
 
@@ -31,8 +33,11 @@
       api.onDupesProgress((p) => (dupes.progress = p)),
       api.onNow((p) => (activity.now = p)),
       api.onDelete((p) => activity.onDelete(p)),
+      api.onUpdateProgress((p) => update.onProgress(p)),
     ];
-    void app.load();
+    void app.load().then(() => {
+      if (app.settings.check_updates) void update.check(true);
+    });
     return () => subs.forEach((s) => void s.then((u) => u()));
   });
 
@@ -132,6 +137,13 @@
 
     <span class="grow"></span>
 
+    {#if update.info}
+      <button class="item update" title={t("ui.update.title", { v: update.info.version })} onclick={() => (update.open = true)}>
+        <span class="ic"><Icon name="up" size={18} /><span class="dot" aria-hidden="true"></span></span>
+        <span class="lbl">{t("ui.update.label")}</span>
+      </button>
+    {/if}
+
     {#if app.info && !app.info.is_admin}
       <button class="admin" title={t("ui.admin.restart")} disabled={elevating || app.busy} onclick={elevate}>
         <Icon name="shield" size={16} />
@@ -199,6 +211,10 @@
 
 <ContextMenu />
 
+{#if update.open}
+  <UpdateDialog />
+{/if}
+
 <style>
   .shell { display: grid; grid-template-columns: 84px 1fr; height: 100vh; }
   .rail { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
@@ -218,6 +234,9 @@
     transition: background 0.15s, color 0.15s, box-shadow 0.2s;
   }
   .lbl { font-size: 11px; font-weight: 500; letter-spacing: 0.01em; }
+  .update { color: #22c55e; }
+  .update .ic { background: rgb(34 197 94 / 0.12); }
+  .dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 2px var(--bg-rail); }
   .item.small { padding: 2px 0; }
   .item.small .ic { width: 34px; height: 34px; border-radius: 10px; }
   .item:hover .ic { background: var(--hover); color: var(--text); }

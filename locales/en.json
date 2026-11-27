@@ -135,6 +135,12 @@
         "target": {
           "cache": "Firefox cache"
         }
+      },
+      "privacy": {
+        "cookies": "{name} cookies",
+        "cookies_detail": "Signs you out of every website. Saved passwords are not touched.",
+        "history": "{name} history",
+        "history_detail": "Visited pages and suggestions. Bookmarks, passwords and forms are not touched."
       }
     },
     "dev": {
@@ -467,7 +473,7 @@
       "activity": "Recent activity",
       "freed": "Freed per week",
       "freed_total_one": "{size} in 1 cleanup",
-      "freed_total": "{size} in {n} cleanups",
+      "freed_total_other": "{size} in {n} cleanups",
       "weeks_ago_one": "{n} week ago",
       "weeks_ago_other": "{n} weeks ago",
       "this_week": "This week"
@@ -506,7 +512,9 @@
       "marked": "{size} selected",
       "requires_admin": "Requires administrator",
       "errors_one": "{n} module with errors",
-      "errors_other": "{n} modules with errors"
+      "errors_other": "{n} modules with errors",
+      "options_one": "1 option",
+      "options_other": "{n} options"
     },
     "confirm": {
       "title": "Clean {size}?",
@@ -668,7 +676,9 @@
       "allow_system_warn": "System files (pagefile.sys, hiberfil.sys, Windows and installed program folders…) are protected because deleting them can break Windows or your programs. With this option you can mark them, and each time you do you'll have to accept responsibility. Drive roots, the Windows folder and your profile always stay blocked.",
       "allow_system_enable": "Turn on",
       "wizard": "Welcome wizard",
-      "wizard_again": "Show again"
+      "wizard_again": "Show again",
+      "privacy": "Browser cookies and history",
+      "privacy_hint": "Shows them in Cleanup, inside each browser. Never marked automatically; passwords and bookmarks are not touched."
     },
     "menu": {
       "cut": "Cut",
@@ -787,6 +797,22 @@
       "empty_hint": "Add a folder here or right-click it in Space, Cleanup or Duplicates.",
       "note": "Protected in Cleanup, Space and Duplicates. Right-click a row for more options.",
       "manage": "Manage"
+    },
+    "update": {
+      "label": "Update",
+      "title": "RCleaner {v} available",
+      "current": "You have version {v}.",
+      "install": "Install and restart",
+      "download": "Download",
+      "later": "Later",
+      "installing": "Downloading and installing…",
+      "check": "Check now",
+      "checking": "Checking…",
+      "latest": "You have the latest version.",
+      "error": "Could not check (offline?).",
+      "auto": "Check for updates on start",
+      "auto_hint": "Looks at the versions published on GitHub.",
+      "portable_hint": "You are using the portable version: download the new one and replace the file."
     }
   },
   "cli": {

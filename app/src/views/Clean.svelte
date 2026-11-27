@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from "../lib/app.svelte";
+  import { bulkPick } from "../lib/results";
   import { api, type Finding } from "../lib/api";
   import { formatBytes, formatCount, modeColors, splitBytes, splitPath } from "../lib/format";
   import ResultList from "../components/ResultList.svelte";
@@ -71,7 +72,8 @@
     if (which === "none") return;
     for (const f of findings) {
       if (!app.selectable(f)) continue;
-      if (which === "all" || f.risk === "safe") app.selected.add(f.id);
+      // Datos del usuario (cookies, historial, modelos…) sólo a mano.
+      if (bulkPick(f, which)) app.selected.add(f.id);
     }
   }
 

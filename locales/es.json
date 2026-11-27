@@ -135,6 +135,12 @@
         "target": {
           "cache": "Caché de Firefox"
         }
+      },
+      "privacy": {
+        "cookies": "Cookies de {name}",
+        "cookies_detail": "Cierra tus sesiones en todas las webs. Las contraseñas guardadas no se tocan.",
+        "history": "Historial de {name}",
+        "history_detail": "Páginas visitadas y sugerencias. No toca marcadores, contraseñas ni formularios."
       }
     },
     "dev": {
@@ -467,7 +473,7 @@
       "activity": "Actividad reciente",
       "freed": "Liberado por semana",
       "freed_total_one": "{size} en 1 limpieza",
-      "freed_total": "{size} en {n} limpiezas",
+      "freed_total_other": "{size} en {n} limpiezas",
       "weeks_ago_one": "Hace {n} semana",
       "weeks_ago_other": "Hace {n} semanas",
       "this_week": "Esta semana"
@@ -506,7 +512,9 @@
       "marked": "{size} marcados",
       "requires_admin": "Requiere administrador",
       "errors_one": "{n} módulo con errores",
-      "errors_other": "{n} módulos con errores"
+      "errors_other": "{n} módulos con errores",
+      "options_one": "1 opción",
+      "options_other": "{n} opciones"
     },
     "confirm": {
       "title": "¿Limpiar {size}?",
@@ -668,7 +676,9 @@
       "allow_system_warn": "Los archivos de sistema (pagefile.sys, hiberfil.sys, carpetas de Windows y de programas instalados…) están protegidos porque borrarlos puede romper Windows o tus programas. Con esta opción podrás marcarlos, y cada vez que lo hagas tendrás que aceptar la responsabilidad. Las raíces de unidad, la carpeta de Windows y tu perfil siguen bloqueados siempre.",
       "allow_system_enable": "Activar",
       "wizard": "Asistente de bienvenida",
-      "wizard_again": "Volver a verlo"
+      "wizard_again": "Volver a verlo",
+      "privacy": "Cookies e historial de navegadores",
+      "privacy_hint": "Los muestra en Limpieza, dentro de cada navegador. Nunca se marcan solos; contraseñas y marcadores no se tocan."
     },
     "menu": {
       "cut": "Cortar",
@@ -787,6 +797,22 @@
       "empty_hint": "Añade una carpeta aquí o con clic derecho en Espacio, Limpieza o Duplicados.",
       "note": "Se protegen en Limpieza, Espacio y Duplicados. Clic derecho en una fila para más opciones.",
       "manage": "Gestionar"
+    },
+    "update": {
+      "label": "Actualizar",
+      "title": "RCleaner {v} disponible",
+      "current": "Tienes la versión {v}.",
+      "install": "Instalar y reiniciar",
+      "download": "Descargar",
+      "later": "Más tarde",
+      "installing": "Descargando e instalando…",
+      "check": "Buscar ahora",
+      "checking": "Buscando…",
+      "latest": "Tienes la última versión.",
+      "error": "No se pudo comprobar (¿sin conexión?).",
+      "auto": "Buscar actualizaciones al abrir",
+      "auto_hint": "Consulta las versiones publicadas en GitHub.",
+      "portable_hint": "Usas la versión portable: descarga la nueva y reemplaza el archivo."
     }
   },
   "cli": {

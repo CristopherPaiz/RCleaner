@@ -9,10 +9,12 @@ mod icons;
 mod space;
 mod state;
 mod tray;
+mod update;
 
 use state::lock;
 use std::time::Duration;
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_window_state::StateFlags;
 
 /// Argumento con el que Windows abre RCleaner al iniciar sesión: sólo bandeja.
 pub const BACKGROUND_ARG: &str = "--background";
@@ -57,6 +59,14 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
+        // Recuerda tamaño, posición y maximizado entre aperturas (también al
+        // volver de la bandeja). La visibilidad la decide `main`, no el plugin.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .build(),
+        )
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec![BACKGROUND_ARG]),
@@ -97,6 +107,8 @@ fn main() {
             commands::to_tray,
             commands::restart_as_admin,
             icons::icons,
+            update::check_update,
+            update::install_update,
             space::disk_scan,
             space::disk_summary,
             space::disk_view,

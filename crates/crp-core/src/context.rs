@@ -54,6 +54,8 @@ pub struct ScanContext {
     pub exclusions: Vec<PathBuf>,
     /// Nombres (en minúsculas) de los ejecutables en marcha.
     pub running: HashSet<String>,
+    /// Incluir datos privados de los navegadores (cookies, historial).
+    pub privacy: bool,
 }
 
 impl ScanContext {
@@ -66,6 +68,7 @@ impl ScanContext {
             dev_roots,
             exclusions: Vec::new(),
             running: HashSet::new(),
+            privacy: false,
         }
     }
 
@@ -88,6 +91,7 @@ impl ScanContext {
             self.dev_roots = settings.dev_roots.clone();
         }
         self.exclusions = settings.exclusions.clone();
+        self.privacy = settings.privacy;
         self
     }
 

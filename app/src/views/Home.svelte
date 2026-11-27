@@ -264,7 +264,7 @@
     <section class="block">
       <div class="card-head">
         <h2>{t("ui.home.freed")}</h2>
-        <span class="faint small num">{t(history.length === 1 ? "ui.home.freed_total_one" : "ui.home.freed_total", { size: formatBytes(totalFreed), n: history.length })}</span>
+        <span class="faint small num">{tn("ui.home.freed_total", history.length, { size: formatBytes(totalFreed) })}</span>
       </div>
       <div class="weeks" role="img" aria-label={t("ui.home.freed")}>
         {#each weeks as w, i (i)}

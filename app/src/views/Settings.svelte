@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, type Mode, type Settings } from "../lib/api";
   import { app } from "../lib/app.svelte";
+  import { update as upd } from "../lib/update.svelte";
   import { LANGUAGES, i18n, resolveLang, t, tn } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
   import ModeEditor from "../components/ModeEditor.svelte";
@@ -228,6 +229,13 @@
       </div>
       <div class="item">
         <span class="grow">
+          {t("ui.settings.privacy")}
+          <span class="faint block">{t("ui.settings.privacy_hint")}</span>
+        </span>
+        <Switch checked={app.settings.privacy} label={t("ui.settings.privacy")} onchange={(v) => update({ privacy: v })} />
+      </div>
+      <div class="item">
+        <span class="grow">
           {t("ui.log.title")}
           <span class="faint block">{t("ui.log.hint")}</span>
         </span>
@@ -354,6 +362,24 @@
           <button class="btn small" onclick={() => api.reveal(app.info!.config_dir)}><Icon name="external" size={14} /> {t("ui.settings.config_folder")}</button>
         {/if}
         <button class="btn small" onclick={() => (app.view = "about")}><Icon name="info" size={14} /> {t("ui.about.open")}</button>
+      </div>
+      <div class="item">
+        <span class="grow">
+          {t("ui.update.auto")}
+          <span class="faint block">
+            {#if upd.status === "checking"}{t("ui.update.checking")}
+            {:else if upd.status === "latest"}{t("ui.update.latest")}
+            {:else if upd.info}{t("ui.update.title", { v: upd.info.version })}
+            {:else if upd.status === "error"}{t("ui.update.error")}
+            {:else}{t("ui.update.auto_hint")}{/if}
+          </span>
+        </span>
+        {#if upd.info}
+          <button class="btn small primary" onclick={() => (upd.open = true)}><Icon name="up" size={14} /> {t("ui.update.label")}</button>
+        {:else}
+          <button class="btn small" disabled={upd.status === "checking"} onclick={() => upd.check()}><Icon name="refresh" size={14} /> {t("ui.update.check")}</button>
+        {/if}
+        <Switch checked={app.settings.check_updates} label={t("ui.update.auto")} onchange={(v) => update({ check_updates: v })} />
       </div>
       <div class="item">
         <span class="grow">{t("ui.settings.wizard")}</span>

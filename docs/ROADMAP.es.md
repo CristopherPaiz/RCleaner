@@ -83,7 +83,7 @@ de usuario (rápido, programador, IA, gamer, profundo).
 ### Fase 6 — Mantenimiento
 - Programas de inicio, tareas programadas, servicios.
 - Limpieza programada (Task Scheduler), `DISM /StartComponentCleanup`, `Windows.old`.
-- Salud de discos, actualizaciones de la app, firma de código, telemetría cero.
+- Salud de discos, firma de código, telemetría cero.
 
 ## Qué NO se hará (a propósito)
 - Borrar **Prefetch**: empeora el arranque; Windows lo gestiona.

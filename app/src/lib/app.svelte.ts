@@ -37,6 +37,8 @@ class AppStore {
     allow_system: false,
     onboarded: true,
     deletion_log: 10000,
+    privacy: false,
+    check_updates: true,
   });
   /** Datos iniciales cargados (para ocultar la pantalla de carga). */
   loaded = $state(false);

@@ -13,6 +13,7 @@
   import { folderSvg } from "../lib/icons.svelte";
   import { menu, type MenuEntry } from "../lib/menu.svelte";
   import { copyText } from "../lib/activity.svelte";
+  import { bySubgroup, groupCandidates, shortLabel } from "../lib/results";
 
   interface Props {
     report: ScanReport;
@@ -27,6 +28,18 @@
   );
 
   const moduleName = (id: string) => app.modules.find((m) => m.id === id)?.name ?? id;
+
+  /** Categorías cuya lista se agrupa por programa (un navegador, su sublista). */
+  const BY_MODULE: Category[] = ["browser"];
+  /** Sub-grupos plegados (por id de módulo). */
+  const closedSub = new SvelteSet<string>();
+
+  const subgroups = (items: Finding[]) => bySubgroup(items, moduleName);
+
+  function moduleIcon(id: string): string | undefined {
+    const proc = app.modules.find((m) => m.id === id)?.processes[0];
+    return proc ? `app:${proc}` : undefined;
+  }
 
   /** Icono de un hallazgo: carpeta conocida, si no la app del limpiador. */
   function findingIcon(f: Finding): { src?: string; key?: string } {
@@ -65,7 +78,7 @@
   }
 
   function groupState(items: Finding[]) {
-    const ok = items.filter((f) => app.selectable(f));
+    const ok = groupCandidates(items, (f) => app.selectable(f), app.selected);
     const n = ok.filter((f) => app.selected.has(f.id));
     return {
       all: ok.length > 0 && n.length === ok.length,
@@ -102,12 +115,47 @@
     menu.show(e, items.filter((x): x is MenuEntry => !!x));
   }
 
+  /** Marcar un grupo entero no marca datos del usuario (cookies, historial…). */
   function toggleGroup(items: Finding[]) {
-    const ok = items.filter((f) => app.selectable(f));
+    const ok = groupCandidates(items, (f) => app.selectable(f), app.selected);
     const all = ok.every((f) => app.selected.has(f.id));
     for (const f of ok) all ? app.selected.delete(f.id) : app.selected.add(f.id);
   }
 </script>
+
+{#snippet row(f: Finding, short: boolean)}
+  {@const off = !app.selectable(f)}
+  {@const ic = findingIcon(f)}
+  <div class="row" class:off class:excluded={!!f.path && !!app.exclusionFor(f.path)} oncontextmenu={(e) => rowMenu(e, f)} role="listitem">
+    <input
+      type="checkbox"
+      checked={app.selected.has(f.id)}
+      disabled={off}
+      onchange={() => toggle(f)}
+      aria-label={f.label}
+    />
+    <span class="f-ic"><FileIcon src={ic.src} key={ic.key} fallback={CATEGORY_ICON[f.category]} size={20} /></span>
+    <div class="main">
+      <div class="label ellipsis">{short ? shortLabel(f.label, moduleName(f.module_id)) : f.label}</div>
+      <div class="detail ellipsis faint">
+        {#if f.age_days !== undefined}<span class="age">{formatAge(f.age_days)}</span> · {/if}{f.detail ?? (short ? riskLabel(f.risk) : moduleName(f.module_id))}
+      </div>
+      {#if f.warning}
+        <div class="warning"><Icon name="alert" size={13} /> {f.warning}</div>
+      {/if}
+      {#if off}<div class="faint small">{t("ui.results.requires_admin")}</div>{/if}
+    </div>
+    <span class="risk {f.risk}">{riskLabel(f.risk)}</span>
+    <span class="size num">{formatBytes(f.bytes)}</span>
+    {#if f.path}
+      <button class="icon-btn" title={t("ui.common.show_in_explorer")} onclick={() => api.reveal(f.path!)}>
+        <Icon name="external" size={15} />
+      </button>
+    {:else}
+      <span></span>
+    {/if}
+  </div>
+{/snippet}
 
 <div class="list">
   {#each groups as g, gi (g.category)}
@@ -141,39 +189,47 @@
 
       {#if expanded}
         <div class="items">
-          {#each g.items as f (f.id)}
-            {@const off = !app.selectable(f)}
-            {@const ic = findingIcon(f)}
-            <div class="row" class:off class:excluded={!!f.path && !!app.exclusionFor(f.path)} oncontextmenu={(e) => rowMenu(e, f)} role="listitem">
-              <input
-                type="checkbox"
-                checked={app.selected.has(f.id)}
-                disabled={off}
-                onchange={() => toggle(f)}
-                aria-label={f.label}
-              />
-              <span class="f-ic"><FileIcon src={ic.src} key={ic.key} fallback={CATEGORY_ICON[f.category]} size={20} /></span>
-              <div class="main">
-                <div class="label ellipsis">{f.label}</div>
-                <div class="detail ellipsis faint">
-                  {#if f.age_days !== undefined}<span class="age">{formatAge(f.age_days)}</span> · {/if}{f.detail ?? moduleName(f.module_id)}
+          {#if BY_MODULE.includes(g.category) && query.trim() === ""}
+            {#each subgroups(g.items) as sg (sg.id)}
+              {@const sst = groupState(sg.items)}
+              {@const sopen = !closedSub.has(sg.id)}
+              <div class="sub">
+                <div class="sub-head">
+                  <input
+                    type="checkbox"
+                    checked={sst.all}
+                    indeterminate={sst.some}
+                    onchange={() => toggleGroup(sg.items)}
+                    aria-label={t("ui.results.select_group", { name: sg.name })}
+                  />
+                  <button
+                    class="sub-main"
+                    aria-expanded={sopen}
+                    onclick={() => (sopen ? closedSub.add(sg.id) : closedSub.delete(sg.id))}
+                  >
+                    <span class="f-ic"><FileIcon key={moduleIcon(sg.id)} fallback={CATEGORY_ICON[g.category]} size={20} /></span>
+                    <span class="sub-name">{sg.name}</span>
+                    <span class="faint small">{tn("ui.results.options", sg.items.length)}</span>
+                    {#if sst.warnings > 0}<span class="warn-inline small"><Icon name="alert" size={12} /></span>{/if}
+                    <span class="grow"></span>
+                    <span class="size num">{formatBytes(sg.bytes)}</span>
+                    <span class="chev" class:rot={sopen}><Icon name="chevron" size={14} /></span>
+                  </button>
                 </div>
-                {#if f.warning}
-                  <div class="warning"><Icon name="alert" size={13} /> {f.warning}</div>
+                {#if sopen}
+                  <div class="sub-items">
+                    {#each sg.items as f (f.id)}
+                      {@render row(f, true)}
+                    {/each}
+                  </div>
                 {/if}
-                {#if off}<div class="faint small">{t("ui.results.requires_admin")}</div>{/if}
               </div>
-              <span class="risk {f.risk}">{riskLabel(f.risk)}</span>
-              <span class="size num">{formatBytes(f.bytes)}</span>
-              {#if f.path}
-                <button class="icon-btn" title={t("ui.common.show_in_explorer")} onclick={() => api.reveal(f.path!)}>
-                  <Icon name="external" size={15} />
-                </button>
-              {:else}
-                <span></span>
-              {/if}
-            </div>
-          {/each}
+            {/each}
+          {:else}
+            {#each g.items as f (f.id)}
+              {@render row(f, false)}
+            {/each}
+          {/if}
         </div>
       {/if}
     </section>
@@ -230,6 +286,16 @@
   .warning { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--warn); margin-top: 2px; }
   .size { text-align: right; font-weight: 600; }
   .empty { padding: 30px 6px; }
+  .sub + .sub { margin-top: 2px; }
+  .sub-head { display: flex; align-items: center; gap: 12px; padding: 0 10px; }
+  .sub-main {
+    flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 6px;
+    border: 0; background: none; cursor: pointer; text-align: left; border-radius: 9px; color: inherit; font: inherit;
+  }
+  .sub-main:hover { background: var(--hover); }
+  .sub-name { font-weight: 600; }
+  .sub-items { padding-left: 34px; border-left: 1px solid var(--line); margin-left: 18px; }
+  .grow { flex: 1; }
   .errors { margin: 14px 6px; color: var(--bad); font-size: 13px; }
   .errors summary { cursor: pointer; }
   .errors .mono { color: var(--text-2); margin: 4px 0; }

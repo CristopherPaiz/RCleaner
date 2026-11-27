@@ -38,7 +38,8 @@ cargo tauri dev
 `cargo tauri dev` starts `npm run dev` (Vite on `http://localhost:1420`) and
 opens the native window. The console shows Rust's `println!` output and errors.
 
-Frontend type checking: `npm run check` (inside `app/`).
+Frontend type checking: `npm run check`; UI tests (Vitest + jsdom, Tauri
+mocked in `src/test/`): `npm test`. Both inside `app/`.
 
 ### Testing as administrator
 Some modules (`system.windows_temp`, Windows Update, logs…) need elevation.
@@ -87,8 +88,23 @@ Taken from `[workspace.package] version` in the root `Cargo.toml`.
 `scripts/release.ps1` changes it for you (see [Releases](#releases)).
 
 ### Installer language
-`app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language` (`es-ES`) and
-`bundle.windows.nsis.languages` (`Spanish`).
+`app/src-tauri/tauri.conf.json` → `bundle.windows.wix.language`
+(`["en-US", "es-ES"]`: one MSI per language) and `bundle.windows.nsis.languages`
+(`["English", "Spanish"]`: one setup that asks, preselecting the system language).
+
+### Updater signing key
+The in-app updater only installs files signed with the key whose public half
+is `plugins.updater.pubkey` in `tauri.conf.json`. The private key lives outside
+the repo (`%USERPROFILE%\.tauri\rcleaner.key`); keep a backup — without it,
+installed copies can't be updated anymore. GitHub needs it as repository
+secrets (Settings › Secrets and variables › Actions):
+
+- `TAURI_SIGNING_PRIVATE_KEY`: the content of `rcleaner.key`.
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: its password (leave it out if none).
+
+Without the secret the release still builds, just without `latest.json`, so
+that version won't be offered as an update. A new key pair
+(`cargo tauri signer generate -w <path>`) means updating `pubkey` too.
 
 ### Icon
 Edit `app/app-icon.png` and regenerate: `cd app; cargo tauri icon app-icon.png -o src-tauri/icons`.
@@ -123,8 +139,11 @@ GitHub builds and publishes releases; the notes come from
    review first, then `git push origin main v0.2.0`.
 3. The tag starts [`.github/workflows/release.yml`](../.github/workflows/release.yml):
    it checks that the tag matches `Cargo.toml` and that the changelog has the
-   section, builds the MSI and EXE installers and creates the GitHub release
-   with both files and that section as notes (~15 min).
+   section, builds the installers (an MSI per language and a bilingual
+   setup.exe) and the portable exe, signs them for the updater and creates the
+   GitHub release with those files, `latest.json` and that section as notes
+   (~15 min). Installed copies find the new version through
+   `releases/latest/download/latest.json`.
 
 Versions must be plain `X.Y.Z` (MSI does not accept `-beta` suffixes).
 

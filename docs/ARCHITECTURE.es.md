@@ -194,4 +194,7 @@ claro y para `data-theme="light"`.
 
 - Unitarias en cada módulo con `Env::sandbox(tempdir)`: nunca tocan rutas reales.
 - `cargo test` = core + platform + modules + disk + cli.
-- Frontend: `cd app; npm run check` (svelte-check, TypeScript estricto).
+- Frontend: `cd app; npm run check` (svelte-check, TypeScript estricto) y
+  `npm test` (Vitest + jsdom: utilidades, traducciones completas en cada
+  idioma, actualizaciones y la lista de resultados; `invoke` simulado en
+  `src/test/tauri.ts`).
