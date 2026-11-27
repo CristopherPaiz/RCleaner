@@ -18,6 +18,8 @@ Risk: 🟢 Safe (preselected) · 🟡 Moderate · 🔴 Advanced. 🛡 = needs ad
 | `system.delivery_optimization` | Windows Update P2P cache | 🟡 🛡 |
 | `system.windows_update` | `SoftwareDistribution\Download` | 🟡 🛡 |
 | `system.recycle_bin` | Recycle Bin on every drive (Win32) | 🟡 |
+| `system.windows_old` | `C:\Windows.old`, `$Windows.~BT`, `$Windows.~WS` (previous installation; ownership is given to Administrators first) | 🟡 🛡 |
+| `system.component_store` | Superseded updates in `WinSxS`, via `DISM /StartComponentCleanup` (size from `/AnalyzeComponentStore`) | 🟡 🛡 |
 
 **Left out on purpose:** Prefetch (slows down startup), `iconcache` (broken
 icons until a restart).

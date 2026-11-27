@@ -804,7 +804,9 @@ name = "crp-platform"
 version = "0.1.3"
 dependencies = [
  "png 0.18.1",
+ "serde",
  "windows-sys 0.61.2",
+ "winreg 0.56.0",
 ]
 
 [[package]]

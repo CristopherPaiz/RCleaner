@@ -89,6 +89,7 @@
 [data-section="clean"] { --a: #10b98a; --b: #7be495; }
 [data-section="space"] { --a: #7c6cff; --b: #d46cf0; }
 [data-section="dupes"] { --a: #ff8f3f; --b: #ff5f7e; }
+[data-section="startup"] { --a: #e0a816; --b: #f5d76e; }
 [data-section="settings"] { --a: #7d8597; --b: #b9c0cf; }
 [data-section="about"] { --a: #f0567a; --b: #ffb36b; }
 

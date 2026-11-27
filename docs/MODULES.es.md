@@ -18,6 +18,8 @@ Riesgo: 🟢 Seguro (preseleccionado) · 🟡 Moderado · 🔴 Avanzado. 🛡 = 
 | `system.delivery_optimization` | Caché P2P de Windows Update | 🟡 🛡 |
 | `system.windows_update` | `SoftwareDistribution\Download` | 🟡 🛡 |
 | `system.recycle_bin` | Papelera de todas las unidades (Win32) | 🟡 |
+| `system.windows_old` | `C:\Windows.old`, `$Windows.~BT`, `$Windows.~WS` (instalación anterior; antes se da la propiedad a Administradores) | 🟡 🛡 |
+| `system.component_store` | Actualizaciones sustituidas en `WinSxS`, con `DISM /StartComponentCleanup` (tamaño según `/AnalyzeComponentStore`) | 🟡 🛡 |
 
 **No incluido a propósito:** Prefetch (empeora arranque), `iconcache` (iconos rotos hasta reiniciar).
 

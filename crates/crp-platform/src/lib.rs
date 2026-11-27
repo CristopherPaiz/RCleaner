@@ -12,6 +12,7 @@ pub mod locale;
 pub mod process;
 pub mod processes;
 pub mod recycle_bin;
+pub mod startup;
 
 pub use elevation::{is_elevated, relaunch_elevated};
 

@@ -13,6 +13,25 @@ Sections: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ## [Unreleased]
 
+### Added
+
+- **Startup** tab: programs that open when you sign in, scheduled tasks and
+  third-party services. Turn them off or on (or set a service to manual)
+  without deleting anything, the same way Task Manager does.
+- Cleanup: **Previous Windows** (`Windows.old` and update leftovers, usually
+  10–30 GB) and **Superseded Windows updates** (WinSxS, with Windows' DISM).
+  Both need administrator and are never preselected.
+- README: an **"Is it safe?"** section explaining what RCleaner will and will
+  never touch.
+
+### Changed
+
+- New **Overview**, in the style of Windows 11's Storage settings: the system
+  drive with what can be freed safely marked on its bar, a quick clean button,
+  plain suggestion rows only when there's something to do (low disk space,
+  previous Windows, a full Recycle Bin, many startup programs, admin-only
+  space, updates) and your other drives. No score, activity feed or chart.
+
 ## [0.1.3] - 2026-11-27
 
 ### Added

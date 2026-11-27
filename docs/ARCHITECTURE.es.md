@@ -62,7 +62,11 @@ tampoco; `modules` y `disk` usan ambos; CLI y app usan `modules`, `disk` y `core
     cada selección así. Las exclusiones nunca se pueden borrar.
 11. Cada borrado se añade a `deleted.log` (líneas JSON, se recorta pasados
     4 MB) con origen, ruta, tamaño y si fue permanente.
-12. `unsafe` está prohibido (`#![forbid(unsafe_code)]`) en todo salvo
+12. Arranque (programas, tareas, servicios) sólo activa/desactiva:
+    `StartupApproved` como el Administrador de tareas, `schtasks /Change`,
+    `sc config start=`. No se borra nada y de la UI sólo se aceptan elementos
+    del último listado.
+13. `unsafe` está prohibido (`#![forbid(unsafe_code)]`) en todo salvo
     `crp-platform`, que envuelve la API de Windows.
 
 ## Espacio y duplicados (`crp-disk`)

@@ -7,6 +7,7 @@ mod background;
 mod commands;
 mod icons;
 mod space;
+mod startup;
 mod state;
 mod tray;
 mod update;
@@ -88,6 +89,7 @@ fn main() {
             commands::deletions,
             commands::deletions_count,
             commands::exclusion_sizes,
+            commands::home_status,
             commands::trim_deletions,
             commands::background_status,
             commands::recycle_bin,
@@ -107,6 +109,12 @@ fn main() {
             commands::to_tray,
             commands::restart_as_admin,
             icons::icons,
+            startup::startup_apps,
+            startup::set_startup_app,
+            startup::startup_tasks,
+            startup::set_startup_task,
+            startup::startup_services,
+            startup::set_service_start,
             update::check_update,
             update::install_update,
             space::disk_scan,

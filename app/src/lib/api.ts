@@ -102,6 +102,43 @@ export interface Settings {
   check_updates: boolean;
 }
 
+export interface HomeStatus {
+  previous_windows: boolean;
+  startup_apps: number;
+}
+
+export interface StartupApp {
+  id: string;
+  name: string;
+  command: string;
+  file: string | null;
+  missing: boolean;
+  scope: "user" | "machine";
+  source: "run" | "run32" | "folder";
+  enabled: boolean;
+}
+
+export interface StartupTask {
+  id: string;
+  name: string;
+  folder: string;
+  command: string;
+  author: string | null;
+  enabled: boolean;
+  running: boolean;
+  triggers: string[];
+}
+
+export interface ServiceItem {
+  name: string;
+  display: string;
+  description: string | null;
+  start: string;
+  delayed: boolean;
+  running: boolean;
+  path: string;
+}
+
 export interface UpdateInfo {
   version: string;
   notes: string | null;
@@ -308,6 +345,13 @@ export const api = {
   cancel: (task: Task = "clean") => invoke<void>("cancel", { task }),
   reveal: (path: string) => invoke<void>("reveal", { path }),
   restartAsAdmin: () => invoke<void>("restart_as_admin"),
+  homeStatus: () => invoke<HomeStatus>("home_status"),
+  startupApps: () => invoke<StartupApp[]>("startup_apps"),
+  setStartupApp: (id: string, enabled: boolean) => invoke<void>("set_startup_app", { id, enabled }),
+  startupTasks: () => invoke<StartupTask[]>("startup_tasks"),
+  setStartupTask: (id: string, enabled: boolean) => invoke<void>("set_startup_task", { id, enabled }),
+  startupServices: () => invoke<ServiceItem[]>("startup_services"),
+  setServiceStart: (name: string, start: string) => invoke<void>("set_service_start", { name, start }),
   checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
   installUpdate: () => invoke<void>("install_update"),
   onUpdateProgress: (cb: (p: UpdateProgress) => void): Promise<UnlistenFn> =>

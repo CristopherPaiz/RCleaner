@@ -22,14 +22,63 @@ who just wants free space each get the right set of cleaners.
 > **Analyzing never deletes anything.** Every finding shows its size and a risk
 > level, and only the *Safe* ones are preselected.
 
+## Is it safe?
+
+Cleaners have earned a bad reputation: registry cleaners that break Windows,
+browser data wiped by default, files gone without asking. RCleaner is built so
+that can't happen to you, and every point below is enforced in the code (see
+[Deletion safety](docs/ARCHITECTURE.md#deletion-safety)):
+
+- **Analyzing never deletes anything.** Scanning only reads. You see every
+  item, its size and its risk before anything happens, and you press the button.
+- **Only what rebuilds itself is preselected.** Caches, temp files,
+  thumbnails, error reports. Things that cost time (re-downloads) or are your
+  data (AI models, cookies, history) are never marked for you — not even by
+  "All".
+- **A fixed list of known folders, no guessing.** Each cleaner targets the
+  folders of one specific app or part of Windows. RCleaner never sweeps your
+  disk for "junk" by pattern.
+- **Hard limits in the engine.** Whatever a cleaner asks for, the engine
+  refuses drive roots, your profile and its main folders (Documents, Desktop,
+  Downloads, Pictures, Music, Videos, OneDrive), Program Files, ProgramData,
+  the Windows folder and anything inside System32, SysWOW64, WinSxS, servicing
+  or Boot.
+- **Links are never followed.** A shortcut or junction inside a cache is
+  removed as a link; what it points to is never touched.
+- **Your exclusions always win.** Excluded folders are never analyzed or
+  deleted, in any section.
+- **Files in use are skipped**, never forced, and the app that holds them is
+  named so you can close it.
+- **What you pick by hand goes to the Recycle Bin** (Space and Duplicates),
+  and Duplicates always keeps at least one copy.
+- **Never:** registry "cleaning", Prefetch, "RAM boosters", saved passwords,
+  bookmarks, form data or browser extensions. They bring no real benefit and
+  are where most "it broke my PC" stories come from.
+- **Startup changes are reversible.** Turning off a program, task or service
+  deletes nothing (the same switch Task Manager uses).
+- **Everything is logged.** A deletion log with path, size and date
+  (Settings › Security).
+- **Open source, no telemetry.** The only network request is the update
+  check against this repository's releases (you can turn it off), and updates
+  are signed.
+
+**Honest limits:** cleaned caches and temp files are deleted for good (they
+don't go to the Recycle Bin, since they rebuild on their own). Removing the
+previous Windows installation or superseded updates can't be undone; those are
+never preselected and say so. As with any tool, keep backups of what matters.
+
 ## Features
 
-- **Overview** – system drive usage, shortcuts and a one-click quick clean.
-- **Cleanup** – 37 cleaners grouped into modes (plus your own custom modes),
+- **Overview** – how much you can free safely, a one-click quick clean and
+  recommendations only when there's something to do (low disk space, a
+  previous Windows installation, a full Recycle Bin, too many startup programs…).
+- **Cleanup** – 39 cleaners grouped into modes (plus your own custom modes),
   warnings when an app that locks its files is open, exclusions and
   restart-as-administrator for system folders.
 - **Space** – an interactive radial map of any drive or folder, the largest
   files and a breakdown by file type. Whatever you pick goes to the Recycle Bin.
+- **Startup** – programs, scheduled tasks and third-party services that start
+  with Windows; turn them off or on without deleting anything.
 - **Duplicates** – exact copies by content (BLAKE3). Hard links and cloud-only
   files are skipped, and at least one copy of every file is always kept.
 - **Your language and theme** – English and Spanish (the system language by

@@ -379,11 +379,31 @@ pub fn reveal(state: State<'_, AppState>, path: PathBuf) -> CmdResult<()> {
         .any(|f| f.path.as_ref() == Some(&path))
         || lock(&state.settings).dev_roots.contains(&path)
         || lock(&state.settings).exclusions.contains(&path)
-        || state.paths.config_dir == path;
+        || state.paths.config_dir == path
+        || crate::startup::known_file(&path);
     if !known {
         return Err(t("app.unknown_path"));
     }
     crate::space::open_in_explorer(&path)
+}
+
+#[derive(Serialize)]
+pub struct HomeStatus {
+    /// Hay una instalación anterior de Windows (`Windows.old`…).
+    previous_windows: bool,
+    /// Programas habilitados al iniciar sesión.
+    startup_apps: usize,
+}
+
+/// Datos baratos para las recomendaciones del Resumen (sólo lee).
+#[tauri::command]
+pub async fn home_status() -> CmdResult<HomeStatus> {
+    tauri::async_runtime::spawn_blocking(|| HomeStatus {
+        previous_windows: !crp_modules::windows::previous_installs(&Env::from_system()).is_empty(),
+        startup_apps: crate::startup::enabled_apps(),
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[derive(Serialize)]

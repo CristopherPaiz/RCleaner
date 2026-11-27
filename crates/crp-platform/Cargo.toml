@@ -10,9 +10,13 @@ publish.workspace = true
 [lib]
 doctest = false
 
+[dependencies]
+serde.workspace = true
+
 [target.'cfg(windows)'.dependencies]
 windows-sys.workspace = true
 png = "0.18"
+winreg = "0.56"
 
 [lints]
 workspace = true

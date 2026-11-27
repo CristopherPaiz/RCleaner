@@ -11,6 +11,7 @@
 //! | `node:123` | archivo del análisis de Espacio (`.exe`, `.lnk`…) |
 //! | `dupe:45` | archivo de Duplicados |
 //! | `app:chrome.exe` | app instalada (según el registro de Windows) |
+//! | `startup:<id>` | programa de Arranque (último listado) |
 
 use crate::state::{AppState, lock};
 use base64::Engine;
@@ -61,6 +62,10 @@ fn resolve(key: &str, state: &AppState) -> Option<(String, IconQuery)> {
             let id = arg.parse().ok()?;
             let path = lock(&state.dupes).as_ref()?.find(id)?.1.path.clone();
             Some((format!("path:{}", path.display()), IconQuery::File(path)))
+        }
+        "startup" => {
+            let file = crate::startup::file_of(arg).filter(|f| f.is_file())?;
+            Some((format!("path:{}", file.display()), IconQuery::File(file)))
         }
         "app" => {
             let exe = find_app(arg)?;

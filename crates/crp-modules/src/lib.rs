@@ -13,12 +13,14 @@ pub mod ai;
 pub mod browsers;
 pub mod dev;
 pub mod system;
+pub mod windows;
 
 use crp_core::{AppPaths, Engine, Env, ScanContext, Settings};
 
 /// Registra todos los módulos en un motor existente.
 pub fn register_all(engine: &mut Engine) {
     system::register(engine);
+    windows::register(engine);
     browsers::register(engine);
     dev::register(engine);
     ai::register(engine);

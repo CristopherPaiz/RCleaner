@@ -106,6 +106,11 @@ pub fn which(env: &Env, program: &str) -> Option<PathBuf> {
 
 /// Ejecuta un programa sin ventana y devuelve error con su stderr si falla.
 pub fn run_command(env: &Env, program: &str, args: &[String]) -> Result<()> {
+    command_output(env, program, args).map(|_| ())
+}
+
+/// Como [`run_command`], pero devuelve lo que el programa escribió en stdout.
+pub fn command_output(env: &Env, program: &str, args: &[String]) -> Result<String> {
     let exe = which(env, program).ok_or_else(|| Error::Command {
         program: program.to_owned(),
         message: crate::i18n::t("error.not_in_path"),
@@ -122,13 +127,19 @@ pub fn run_command(env: &Env, program: &str, args: &[String]) -> Result<()> {
         program: program.to_owned(),
         message: e.to_string(),
     })?;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     if output.status.success() {
-        Ok(())
+        Ok(stdout)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        let message = if stderr.trim().is_empty() {
+            stdout.trim()
+        } else {
+            stderr.trim()
+        };
         Err(Error::Command {
             program: program.to_owned(),
-            message: format!("{} {}", output.status, stderr.trim()),
+            message: format!("{} {message}", output.status),
         })
     }
 }

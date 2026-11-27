@@ -15,7 +15,7 @@ import {
 } from "./api";
 import { i18n, resolveLang } from "./i18n.svelte";
 
-export type View = "home" | "clean" | "space" | "dupes" | "exclusions" | "settings" | "about";
+export type View = "home" | "clean" | "space" | "dupes" | "startup" | "exclusions" | "settings" | "about";
 export type Phase = "idle" | "scanning" | "results" | "cleaning" | "done";
 
 class AppStore {

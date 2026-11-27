@@ -22,14 +22,67 @@ y quien sólo quiere espacio libre tienen cada uno sus limpiadores.
 > **Analizar nunca borra nada.** Cada hallazgo muestra su tamaño y su nivel de
 > riesgo, y sólo los *Seguros* vienen marcados.
 
+## ¿Es seguro?
+
+Los limpiadores se han ganado mala fama: limpiadores de registro que rompen
+Windows, datos del navegador borrados por defecto, archivos que desaparecen sin
+preguntar. RCleaner está hecho para que eso no te pase, y cada punto de esta
+lista lo impone el código (ver
+[Seguridad del borrado](docs/ARCHITECTURE.es.md#seguridad-del-borrado)):
+
+- **Analizar nunca borra nada.** El análisis sólo lee. Ves cada elemento, su
+  tamaño y su riesgo antes de que pase nada, y el botón lo pulsas tú.
+- **Sólo viene marcado lo que se regenera solo.** Cachés, temporales,
+  miniaturas, informes de errores. Lo que cuesta tiempo (volver a descargar) o
+  son datos tuyos (modelos de IA, cookies, historial) nunca se marca por ti,
+  ni siquiera con «Todo».
+- **Una lista fija de carpetas conocidas, sin adivinar.** Cada limpiador apunta
+  a las carpetas de una app concreta o de una parte de Windows. RCleaner nunca
+  recorre tu disco buscando «basura» por patrones.
+- **Límites duros en el motor.** Pida lo que pida un limpiador, el motor
+  rechaza las raíces de las unidades, tu perfil y sus carpetas principales
+  (Documentos, Escritorio, Descargas, Imágenes, Música, Vídeos, OneDrive),
+  Program Files, ProgramData, la carpeta de Windows y todo lo que haya dentro
+  de System32, SysWOW64, WinSxS, servicing o Boot.
+- **Nunca se siguen los enlaces.** Un acceso directo o una unión dentro de una
+  caché se quita como enlace; lo que hay al otro lado no se toca.
+- **Tus exclusiones mandan.** Las carpetas excluidas no se analizan ni se
+  borran en ninguna sección.
+- **Los archivos en uso se omiten**, nunca se fuerzan, y se dice qué app los
+  tiene abiertos para que la cierres.
+- **Lo que eliges a mano va a la papelera** (Espacio y Duplicados), y en
+  Duplicados siempre queda al menos una copia.
+- **Nunca:** «limpieza» del registro, Prefetch, «aceleradores de RAM»,
+  contraseñas guardadas, marcadores, datos de formularios ni extensiones del
+  navegador. No aportan nada real y de ahí salen casi todas las historias de
+  «me rompió el PC».
+- **Los cambios de Arranque se pueden deshacer.** Desactivar un programa, una
+  tarea o un servicio no borra nada (es el mismo interruptor que usa el
+  Administrador de tareas).
+- **Todo queda registrado.** Un registro de borrados con ruta, tamaño y fecha
+  (Ajustes › Seguridad).
+- **Código abierto y sin telemetría.** La única conexión a internet es buscar
+  actualizaciones en las releases de este repositorio (se puede apagar), y las
+  actualizaciones van firmadas.
+
+**Límites, con honestidad:** las cachés y temporales que se limpian se borran
+definitivamente (no van a la papelera, porque se regeneran solos). Quitar la
+instalación anterior de Windows o las actualizaciones sustituidas no se puede
+deshacer; nunca vienen marcados y lo avisan. Como con cualquier herramienta,
+ten copia de lo importante.
+
 ## Funciones
 
-- **Resumen**: uso del disco del sistema, accesos directos y limpieza rápida.
-- **Limpieza**: 37 limpiadores agrupados en modos (y los tuyos propios), aviso
+- **Resumen**: cuánto puedes liberar sin riesgo, limpieza rápida de un clic y
+  recomendaciones sólo cuando hay algo que hacer (poco espacio, una instalación
+  anterior de Windows, la papelera llena, demasiados programas al arrancar…).
+- **Limpieza**: 39 limpiadores agrupados en modos (y los tuyos propios), aviso
   cuando hay abierta una app que bloquea sus archivos, exclusiones y reinicio
   como administrador para carpetas del sistema.
 - **Espacio**: mapa radial navegable de cualquier unidad o carpeta, archivos más
   grandes y desglose por tipo. Lo que elijas va a la papelera.
+- **Arranque**: programas, tareas programadas y servicios de terceros que se
+  abren con Windows; desactívalos o actívalos sin borrar nada.
 - **Duplicados**: copias exactas por contenido (BLAKE3). Se saltan los enlaces
   duros y los archivos que sólo están en la nube, y siempre queda una copia.
 - **Tu idioma y tu tema**: español e inglés (por defecto el del sistema), tema

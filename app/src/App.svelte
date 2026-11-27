@@ -16,6 +16,7 @@
   import SettingsView from "./views/Settings.svelte";
   import About from "./views/About.svelte";
   import Exclusions from "./views/Exclusions.svelte";
+  import Startup from "./views/Startup.svelte";
   import ContextMenu from "./components/ContextMenu.svelte";
   import Wizard from "./components/Wizard.svelte";
   import { menu, textMenu } from "./lib/menu.svelte";
@@ -83,6 +84,7 @@
     { view: "clean", label: "ui.nav.clean", icon: "sparkles" },
     { view: "space", label: "ui.nav.space", icon: "pie" },
     { view: "dupes", label: "ui.nav.dupes", icon: "copy" },
+    { view: "startup", label: "ui.nav.startup", icon: "rocket" },
     { view: "exclusions", label: "ui.nav.exclusions", icon: "shield" },
   ];
 
@@ -193,6 +195,8 @@
           <Space />
         {:else if app.view === "dupes"}
           <Dupes />
+        {:else if app.view === "startup"}
+          <Startup />
         {:else if app.view === "exclusions"}
           <Exclusions />
         {:else if app.view === "about"}

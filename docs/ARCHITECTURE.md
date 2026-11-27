@@ -63,7 +63,10 @@ does `platform`; `modules` and `disk` use both; the CLI and the app use
     such pick. Exclusions are never deletable.
 11. Every deletion is appended to `deleted.log` (JSON lines, trimmed past
     4 MB) with source, path, size and whether it was permanent.
-12. `unsafe` is forbidden (`#![forbid(unsafe_code)]`) everywhere except
+12. Startup (programs, tasks, services) only toggles: `StartupApproved` like
+    Task Manager, `schtasks /Change`, `sc config start=`. Nothing is deleted,
+    and only items from the last listing are accepted from the UI.
+13. `unsafe` is forbidden (`#![forbid(unsafe_code)]`) everywhere except
     `crp-platform`, which wraps the Windows API.
 
 ## Space and duplicates (`crp-disk`)
